@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.3
+
+- The container images for earlier tags could no longer be pulled: their
+  per-architecture images were removed from the registry. This release
+  publishes the image again; use `ghcr.io/aryan22g/agw:v0.1.3` or `latest`.
+- `ags-signd`, the key-custody daemon the documentation describes, now ships
+  in the release archives, the install script and the image. The install
+  script still installs older releases, which do not include it.
+- The release workflow can be re-run after a failure without first deleting
+  the release.
+- Documentation: how to install the Python and Go SDKs, how to keep a
+  checkpoint as an anchor, and the exact client URL for `agw mcp` over HTTP.
+
 ## v0.1.2
 
 - The container image carries the standard OCI labels and annotations

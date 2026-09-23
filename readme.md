@@ -30,6 +30,13 @@ verifier that checks evidence in your browser, with nothing uploaded.
 ## Install
 
 ```bash
+# Linux and macOS: checks the download's checksum, then installs agw,
+# agw-verify, ags and ags-signd
+curl -fsSL https://aryan22g.github.io/agw/install.sh | sh
+
+# the container image
+docker run --rm ghcr.io/aryan22g/agw version
+
 # from source (Go 1.26+)
 go install github.com/Aryan22g/agw/cmd/agw@latest
 go install github.com/Aryan22g/agw/cmd/agw-verify@latest
@@ -83,9 +90,18 @@ verified.
 
 ```bash
 agw audit verify EVIDENCE.jsonl --key checkpoint.pub            # exit 0 intact, 2 not
-agw audit verify EVIDENCE.jsonl --key checkpoint.pub --anchor KEPT   # also detects rollback
+agw audit verify EVIDENCE.jsonl --key checkpoint.pub --anchor KEPT   # also detects deleted recent records
 agw audit export EVIDENCE.jsonl --key checkpoint.pub --out q3.bundle.json
 agw audit export EVIDENCE.jsonl --key checkpoint.pub --format aat    # IETF agent-audit-trail-04
+```
+
+Records after the last checkpoint can be deleted without trace from the file
+alone. To catch that, keep a checkpoint somewhere the log's owner cannot
+change, and pass it as the anchor next time:
+
+```bash
+grep '"type":"checkpoint"' EVIDENCE.jsonl | tail -1 > kept.json   # store this elsewhere
+agw audit verify EVIDENCE.jsonl --key checkpoint.pub --anchor kept.json
 ```
 
 The format is specified in [RFC-0009](docs/rfcs/RFC-0009-evidence-chain-format.md),
@@ -147,6 +163,10 @@ version and `tag` -- never an edit in place.
 
 ### Python
 
+```bash
+pip install "git+https://github.com/Aryan22g/agw#subdirectory=sdks/python"
+```
+
 ```python
 from ags_sdk import Client, load_keystore
 
@@ -163,6 +183,10 @@ response = client.post_json("/v1/tools/github/repos/acme/app/issues",
 ```
 
 ### Go
+
+```bash
+go get github.com/Aryan22g/agw/sdks/go/agentgw@latest
+```
 
 ```go
 client, err := agentgw.New(agentgw.Config{
@@ -195,7 +219,8 @@ happens locally, where the private key is.
 
 ## Key custody: `ags-signd`
 
-A process that signs does not have to hold its key. `ags-signd` holds it in a
+A process that signs does not have to hold its key. `ags-signd` (installed
+with the others, and in the image) holds it in a
 separate process and signs on request; the caller never sees the key material,
 and the protocol has no operation that would return it.
 

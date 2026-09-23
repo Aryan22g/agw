@@ -41,9 +41,15 @@ jobs:
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+        # Re-runnable: if the release exists (a later step failed and the run
+        # is being retried), replace its assets instead of failing here.
         run: |
-          gh release create "${{ github.ref_name }}" dist/*.tar.gz dist/SHA256SUMS \
-            --title "${{ github.ref_name }}" --generate-notes --verify-tag
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" dist/*.tar.gz dist/SHA256SUMS --clobber
+          else
+            gh release create "${{ github.ref_name }}" dist/*.tar.gz dist/SHA256SUMS \
+              --title "${{ github.ref_name }}" --generate-notes --verify-tag
+          fi
 
       # Image names must be lowercase; the repository owner is not.
       # The build date is the commit's, so rebuilding the tag gives the same labels.

@@ -16,7 +16,7 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=
 ARG DATE=
-RUN for b in agw agw-verify ags; do \
+RUN for b in agw agw-verify ags ags-signd; do \
       CGO_ENABLED=0 go build -trimpath \
         -ldflags="-s -w -X github.com/Aryan22g/agw/internal/buildinfo.Version=${VERSION} -X github.com/Aryan22g/agw/internal/buildinfo.Commit=${COMMIT} -X github.com/Aryan22g/agw/internal/buildinfo.Date=${DATE}" \
         -o /out/$b ./cmd/$b || exit 1; \
@@ -42,7 +42,7 @@ LABEL org.opencontainers.image.source="https://github.com/Aryan22g/agw" \
 RUN apk --no-cache add ca-certificates iproute2 nftables \
  && addgroup -g 1337 agw && adduser -D -u 1337 -G agw -h /home/agw agw \
  && mkdir -p /data /evidence && chown agw:agw /data /evidence
-COPY --from=builder /out/agw /out/agw-verify /out/ags /usr/local/bin/
+COPY --from=builder /out/agw /out/agw-verify /out/ags /out/ags-signd /usr/local/bin/
 ENV AGW_HOME=/home/agw/.agw
 USER agw
 WORKDIR /data

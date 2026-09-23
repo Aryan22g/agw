@@ -6,6 +6,8 @@ nonces and signature bases are handled for you.
 ## Install
 
 ```bash
+pip install "git+https://github.com/Aryan22g/agw#subdirectory=sdks/python"
+# or, from a clone:
 pip install -e sdks/python
 ```
 

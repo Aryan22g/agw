@@ -9,7 +9,7 @@ LDFLAGS := -s -w -X github.com/Aryan22g/agw/internal/buildinfo.Version=$(VERSION
            -X github.com/Aryan22g/agw/internal/buildinfo.Date=$(DATE)
 
 # The binaries people install.
-DIST_BINS      := agw agw-verify ags
+DIST_BINS      := agw agw-verify ags ags-signd
 DIST_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 
 help: ## Show available targets

@@ -5,7 +5,7 @@
 #
 # Read it first; it is short. It downloads one archive and SHA256SUMS for
 # your OS and architecture, refuses to continue if the checksum does not
-# match, and copies three binaries into a directory on your PATH. It never runs
+# match, and copies the binaries into a directory on your PATH. It never runs
 # anything it downloaded, and it uses sudo only if you ask for a system
 # directory that needs it.
 #
@@ -18,7 +18,7 @@ set -eu
 
 REPO="Aryan22g/agw"
 BASE="${AGW_DOWNLOAD_BASE:-https://github.com/$REPO/releases/download}"
-BINS="agw agw-verify ags"
+BINS="agw agw-verify ags ags-signd"
 
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'agw install: %s\n' "$*" >&2; exit 1; }
@@ -85,10 +85,16 @@ if [ ! -w "$dir" ]; then
   sudo=sudo
   say "$dir needs sudo"
 fi
+installed=""
 for b in $BINS; do
-  $sudo install -m 0755 "$tmp/$name/$b" "$dir/$b"
+  f="$tmp/$name/$b"
+  [ -f "$f" ] || f="$f.exe"
+  [ -f "$f" ] || continue   # an older release may not ship every binary
+  $sudo install -m 0755 "$f" "$dir/$(basename "$f")"
+  installed="$installed $b"
 done
-say "installed $BINS into $dir"
+[ -n "$installed" ] || fail "the archive contained none of: $BINS"
+say "installed$installed into $dir"
 
 case ":$PATH:" in
   *":$dir:"*) ;;

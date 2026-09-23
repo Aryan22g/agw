@@ -145,7 +145,9 @@ all of agw's own output goes to stderr, which clients show in the server's log.
 agw mcp --policy agw-actions.yaml --agent my-agent --upstream http://localhost:3000/mcp
 ```
 
-Then point the client at `http://127.0.0.1:8900`.
+Then point the client at `http://127.0.0.1:8900`, with no path: the path the
+client uses is appended to the upstream's, so `http://127.0.0.1:8900/mcp`
+would reach `/mcp/mcp`.
 
 ### Tool redefinition (the rug pull)
 
