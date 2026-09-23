@@ -2,8 +2,9 @@
 //
 // Evidence is only as useful as the ability to say which code produced it, so
 // every binary answers `version` the same way. Release builds stamp Version
-// through -ldflags; anything else falls back to the VCS data the Go toolchain
-// embeds, so even a `go install` build can say which commit it came from.
+// through -ldflags. Anything else falls back to what the Go toolchain embeds:
+// `go install ...@v0.1.0` records the module version, and a build from a clone
+// records the commit.
 package buildinfo
 
 import (
@@ -25,8 +26,9 @@ var (
 
 // String renders one line suitable for `<prog> version`.
 func String(prog string) string {
-	commit, date, dirty := Commit, Date, false
+	version, commit, date, dirty := Version, Commit, Date, false
 	if bi, ok := debug.ReadBuildInfo(); ok {
+		version = moduleVersion(version, bi.Main.Version)
 		for _, s := range bi.Settings {
 			switch s.Key {
 			case "vcs.revision":
@@ -51,9 +53,19 @@ func String(prog string) string {
 	if dirty {
 		commit += "-dirty"
 	}
-	out := fmt.Sprintf("%s %s (commit %s", prog, Version, commit)
+	out := fmt.Sprintf("%s %s (commit %s", prog, version, commit)
 	if date != "" {
 		out += ", built " + date
 	}
 	return out + fmt.Sprintf(", %s, %s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+}
+
+// moduleVersion prefers a version stamped at link time, then the module
+// version the toolchain recorded. "(devel)" is what a build from a clone
+// records, which says nothing.
+func moduleVersion(stamped, recorded string) string {
+	if stamped != "dev" || recorded == "" || recorded == "(devel)" {
+		return stamped
+	}
+	return recorded
 }
