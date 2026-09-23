@@ -228,3 +228,23 @@ func TestTailNoticesTruncation(t *testing.T) {
 		t.Fatal("truncation went unnoticed")
 	}
 }
+
+// TestVerifyCallsAnEmptyLogEmpty: exit 0, because nothing in the log is
+// wrong, but never "VERIFIED" -- an empty log is also what deleting every
+// record leaves, and only an anchor tells the two apart (RFC-0009 §6.4).
+func TestVerifyCallsAnEmptyLogEmpty(t *testing.T) {
+	_, pubFile, _ := fixture(t, 1)
+	empty := filepath.Join(t.TempDir(), "empty.jsonl")
+	if err := os.WriteFile(empty, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{empty, "--key", pubFile}, {empty}} {
+		out := capture(t)
+		if err := Verify("agw", args); err != nil {
+			t.Fatalf("%v: %v", args[1:], err)
+		}
+		if !strings.Contains(out.String(), "EMPTY —") || strings.Contains(out.String(), "VERIFIED") {
+			t.Errorf("%v: want EMPTY and no VERIFIED:\n%s", args[1:], out)
+		}
+	}
+}

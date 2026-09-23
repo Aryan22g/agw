@@ -210,7 +210,8 @@ function el(tag, attrs = {}, ...children) {
 
 async function run() {
   const out = $("#vout");
-  if (!state.log) {
+  // null means no file yet; "" is a file with nothing in it, which is a result.
+  if (state.log === null) {
     out.replaceChildren(el("div", { class: "verdict" }, el("span", { class: "word" }, "Choose an evidence log"),
       el("span", { class: "why" }, "Or load the demo log to see a verified one.")));
     return;
@@ -241,6 +242,10 @@ async function run() {
     word = "Tampering detected";
     const first = r.problems.find((p) => p.kind !== "superseded_format");
     why = first ? `At seq ${first.seq}: ${KIND_EXPLAINED[first.kind] || first.kind}. Records before it remain trustworthy.` : "";
+  } else if (r.records === 0n) {
+    cls = "partial";
+    word = "Empty log";
+    why = "It contains no records, so there is nothing to verify. An empty log is also what deleting every record produces; only a checkpoint you kept earlier can tell the two apart.";
   } else if (!key) {
     cls = "partial";
     word = "Chain intact, signatures not checked";

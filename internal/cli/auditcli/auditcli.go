@@ -261,6 +261,12 @@ func Verify(prog string, args []string) error {
 
 	if res.Intact {
 		switch {
+		case res.Records == 0:
+			// Nothing was checked, and an empty file is exactly what deleting
+			// every record leaves behind. "VERIFIED" would read as assurance.
+			p("EMPTY — the log contains no records, so there is nothing to verify.\n")
+			p("An empty log is also what deleting every record produces; only a\n")
+			p("checkpoint kept from an earlier reading (--anchor) tells the two apart.\n")
 		case pub == nil:
 			p("VERIFIED (chain only) — no record was altered, removed or reordered.\n")
 			p("Supply --key to also prove the log was not rewritten wholesale.\n")
@@ -621,6 +627,8 @@ func VerifyBundle(prog string, args []string) error {
 	}
 
 	switch {
+	case len(bundle.Records) == 0:
+		p("EMPTY -- the bundle contains no records, so there is nothing to verify.\n")
 	case pub == nil:
 		p("VERIFIED (content only) -- no record was altered.\n")
 		p("Supply --key to also verify the checkpoint signatures.\n")

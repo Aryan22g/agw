@@ -363,6 +363,11 @@ It MUST NOT describe a log with `unanchoredRecords > 0` as verified without
 qualification: those are precisely the records that could be removed without
 detection.
 
+It MUST NOT describe an intact log with `records = 0` as verified: there is
+nothing to verify, and an empty log is also what removing every record
+produces. Only an anchor (§6.3) tells the two apart. It reports such a log as
+empty; the result is otherwise unchanged (`intact` remains true).
+
 Each problem carries a sequence number: the record's `seq` for `version`,
 `superseded_format`, `sequence`, `chain` and `content`; the checkpoint's `seq`
 for `checkpoint`; `lastSeq + 1` for `malformed`; `headSeq` for `unanchored`

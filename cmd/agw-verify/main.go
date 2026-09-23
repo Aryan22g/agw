@@ -689,6 +689,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		switch {
 		case !res.Intact:
 			fmt.Fprintln(stdout, "NOT VERIFIED")
+		case res.Records == 0:
+			// RFC-0009 §6.4: nothing was checked, and an empty log is also
+			// what deleting every record leaves. Only --anchor tells them apart.
+			fmt.Fprintln(stdout, "EMPTY (no records, nothing to verify; an empty log is also what deleting every record produces, which only --anchor detects)")
 		case pub == nil:
 			fmt.Fprintln(stdout, "VERIFIED (chain only: no key given, signatures not checked)")
 		case res.UnanchoredRecords > 0:

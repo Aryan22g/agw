@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.1
+
+- Verifiers no longer call an empty evidence log "VERIFIED". It contains
+  nothing to verify, and an empty log is also what deleting every record
+  produces; only a kept checkpoint (`--anchor`) tells the two apart.
+  `agw audit verify`, `ags audit verify`, `agw-verify`, bundle verification
+  and the website now say **EMPTY**. The result is otherwise unchanged:
+  `intact` is true and the exit status is 0. RFC-0009 §6.4 now requires this.
+- The website's verifier treated an empty file as no file at all and asked
+  for one again. It now reports it.
+- `agw version` from `go install ...@vX.Y.Z` reported `dev (commit unknown)`.
+  It now reports the module version.
+
 ## v0.1.0 — first public release
 
 ### Containment plane: `agw`

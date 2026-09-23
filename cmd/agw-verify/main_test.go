@@ -394,3 +394,26 @@ func TestDifferentialAgainstJavaScript(t *testing.T) {
 		}
 	}
 }
+
+// TestEmptyLogIsNotCalledVerified: an empty log verifies (nothing in it is
+// wrong), but it proves nothing, and deleting every record produces one. So it
+// exits 0 and says EMPTY, never VERIFIED (RFC-0009 §6.4).
+func TestEmptyLogIsNotCalledVerified(t *testing.T) {
+	c := loadCorpus(t)
+	dir := t.TempDir()
+	keyFile := dir + "/k.pub"
+	_ = os.WriteFile(keyFile, []byte(c.PublicKey+"\n"), 0o644)
+	for name, content := range map[string]string{"empty": "", "blank lines": "\n  \n\n"} {
+		path := dir + "/log.jsonl"
+		_ = os.WriteFile(path, []byte(content), 0o644)
+		for _, args := range [][]string{{path, "--key", keyFile}, {path}} {
+			var out, errb bytes.Buffer
+			if got := run(args, &out, &errb); got != 0 {
+				t.Errorf("%s %v: exit %d, want 0", name, args[1:], got)
+			}
+			if !strings.Contains(out.String(), "EMPTY") || strings.Contains(out.String(), "VERIFIED") {
+				t.Errorf("%s %v: want EMPTY and no VERIFIED:\n%s", name, args[1:], out.String())
+			}
+		}
+	}
+}
