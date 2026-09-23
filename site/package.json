@@ -1,0 +1,6 @@
+{
+  "name": "agw-site",
+  "private": true,
+  "type": "module",
+  "description": "The agw launch site. Static files; no build step, no dependencies."
+}

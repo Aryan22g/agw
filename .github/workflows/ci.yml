@@ -1,0 +1,203 @@
+# Every claim the README makes is a job here. A claim no job checks is a claim
+# nobody can rely on.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: make fmt-check
+      - name: go vet (host and linux)
+        run: make vet
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          "$(go env GOPATH)/bin/staticcheck" ./...
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
+
+  # The containment tests build network namespaces and nftables rules, so
+  # they need root. Run as a normal user they skip -- which is how they went
+  # unexercised before this workflow existed.
+  test-linux-root:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: install iproute2 and nftables
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq iproute2 nftables
+      # Docker on the runner sets the FORWARD policy to DROP. That blocks
+      # sandbox egress on its own, so TestTheFirewallIsTheControl could not
+      # show that our rule is what blocks it. Our rules do not depend on this.
+      - name: let the host forward, so our rule is the only control
+        run: sudo iptables -P FORWARD ACCEPT
+      - name: go test -race, as root
+        run: |
+          sudo env "PATH=$PATH" GITHUB_ACTIONS="$GITHUB_ACTIONS" ./scripts/ci-annotate.sh "go test -race, as root" go test -race -count=1 ./...
+      # The steps below diagnose independently, so they run even when the
+      # step above failed.
+      - name: the containment tests actually ran
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          sudo env "PATH=$PATH" go test -count=1 -v ./internal/confine/netns/ 2>&1 | tee netns.log
+          if grep -q -- '--- SKIP' netns.log; then echo "::error::containment tests skipped"; exit 1; fi
+      - name: kill switch end to end, latency bound asserted
+        if: success() || failure()
+        run: sudo env "PATH=$PATH" GITHUB_ACTIONS="$GITHUB_ACTIONS" ./scripts/ci-annotate.sh "kill switch" ./scripts/killswitch-e2e.sh
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test -count=1 ./...
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: cross-compile every release platform
+        run: make dist
+      # `go install ...@vX` packs the module into a zip on the proxy, which
+      # refuses some file names. v0.1.0 shipped two, and a tag cannot be fixed.
+      - name: the module packs as a Go module zip (go install works)
+        run: |
+          d=$(mktemp -d)
+          git archive HEAD | tar -x -C "$d"
+          go -C scripts/modzip run . "$d"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: evidence corpus, three verifiers, differential search (Go vs Go, Go vs JavaScript)
+        run: ./scripts/ci-annotate.sh "conformance" make conformance
+      - name: the in-browser verifier passes the corpus
+        run: node site/test/conformance.mjs
+      - name: the install script parses
+        run: sh -n site/install.sh
+      - name: AGS1 Python SDK reproduces the Go signatures byte for byte
+        run: |
+          pip install -q -e sdks/python
+          python sdks/python/tests/test_conformance.py
+
+  # The adversarial gym: many generated worlds, scored against the world's own
+  # receipt log. Then the same agent under real network isolation.
+  gym:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: sweep 30 worlds
+        run: go run ./cmd/agw-gym sweep --runs 30
+      - name: contained mode (Docker --internal network)
+        run: ./scripts/ci-annotate.sh "gym contained mode" ./gym/contained.sh --seed ${{ github.run_number }}
+
+  # Level 0, as a new user meets it: the stock OpenTelemetry Python SDK,
+  # configured only through OTEL_* variables, over every transport.
+  onboarding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q opentelemetry-sdk opentelemetry-exporter-otlp-proto-http opentelemetry-exporter-otlp-proto-grpc
+      - run: ./scripts/onboarding-e2e.sh
+
+  # Phase 3 substrates, each tested adversarially with the files users copy.
+  sidecar-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose sidecar vs an agent with root
+        run: ./integrations/docker-sidecar/test.sh
+
+  sidecar-kubernetes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: install kind
+        run: go install sigs.k8s.io/kind@v0.29.0 && echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: real cluster, root attacker, admission policy
+        run: ./integrations/kubernetes/test.sh
+
+  # The GitHub Action in integrations/github-action, used exactly as a
+  # consumer would use it.
+  github-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: contained
+        uses: ./integrations/github-action
+        with:
+          policy: integrations/github-action/example-policy.yaml
+          command: >-
+            curl -sf -o /dev/null https://pypi.org/simple/ &&
+            ! curl -sf --max-time 5 -o /dev/null https://example.com/ &&
+            ! curl -sf --max-time 5 -o /dev/null http://169.254.169.254/
+          artifact-name: agw-evidence-ci
+      - name: the refusals were recorded
+        run: test "${{ steps.contained.outputs.denied }}" -ge 1
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build the agw image
+        run: make image-agw
+      - name: smoke test
+        run: |
+          docker run --rm agw:latest version
+          docker run --rm --entrypoint agw-verify agw:latest --help || test $? -eq 1

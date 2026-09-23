@@ -1,0 +1,65 @@
+# Publishes site/ to GitHub Pages. The in-browser verifier is tested against
+# the conformance corpus first: a site whose verifier disagrees with the
+# specification is not deployed.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "conformance/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: the in-browser verifier passes the conformance corpus
+        run: node site/test/conformance.mjs
+      - name: the published samples are what they claim to be
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import { verify, importPublicKey } from "./site/assets/rfc0009.js";
+            const key = await importPublicKey(readFileSync("site/samples/contained-agent.pub", "utf8"));
+            const good = await verify(readFileSync("site/samples/contained-agent.jsonl", "utf8"), key);
+            const bad = await verify(readFileSync("site/samples/contained-agent-tampered.jsonl", "utf8"), key);
+            if (!good.intact || bad.intact) { console.error("sample verdicts are wrong"); process.exit(1); }
+            console.log("samples: genuine verifies, tampered does not");'
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      # The installer is piped into sh, so what the live site serves must be
+      # exactly what is in the repository -- checked after every deploy.
+      - name: the live site serves this commit's installer and verifier
+        env:
+          URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for f in install.sh assets/rfc0009.js samples/contained-agent.jsonl; do
+            ok=0
+            for _ in $(seq 1 20); do
+              if curl -fsS "${URL}${f}" -o live && cmp -s live "site/$f"; then ok=1; break; fi
+              sleep 6
+            done
+            [ "$ok" = 1 ] || { echo "::error::${URL}${f} does not match site/$f"; exit 1; }
+            echo "live ${URL}${f} matches"
+          done
+          curl -fsS "$URL" | grep -q 'aryan22g.github.io/agw/install.sh'

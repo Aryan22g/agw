@@ -1,0 +1,37 @@
+# The agw image: the confinement plane, the recorder, the MCP enforcement
+# point and the standalone verifier.
+#
+#   docker run --rm -p 4318:4318 -v "$PWD:/data" ghcr.io/OWNER/agw watch --listen 0.0.0.0:4318 --out /data/evidence.jsonl
+#
+# `agw proxy`, `agw watch`, `agw mcp` and `agw-verify` need no privileges and
+# run as an unprivileged user by default. `agw run` builds a network namespace
+# and firewall, so it needs root and --privileged (or CAP_NET_ADMIN and
+# CAP_SYS_ADMIN); iproute2 and nftables are included for it.
+
+FROM golang:1.26-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ARG VERSION=dev
+ARG COMMIT=
+ARG DATE=
+RUN for b in agw agw-verify ags; do \
+      CGO_ENABLED=0 go build -trimpath \
+        -ldflags="-s -w -X github.com/Aryan22g/agw/internal/buildinfo.Version=${VERSION} -X github.com/Aryan22g/agw/internal/buildinfo.Commit=${COMMIT} -X github.com/Aryan22g/agw/internal/buildinfo.Date=${DATE}" \
+        -o /out/$b ./cmd/$b || exit 1; \
+    done
+
+FROM alpine:3.21
+# UID 1337, the sidecar convention Istio established: `agw sidecar-init`
+# allows exactly this UID out of a shared network namespace by default, so the
+# image's own user and the proxy exception agree without configuration.
+RUN apk --no-cache add ca-certificates iproute2 nftables \
+ && addgroup -g 1337 agw && adduser -D -u 1337 -G agw -h /home/agw agw \
+ && mkdir -p /data /evidence && chown agw:agw /data /evidence
+COPY --from=builder /out/agw /out/agw-verify /out/ags /usr/local/bin/
+ENV AGW_HOME=/home/agw/.agw
+USER agw
+WORKDIR /data
+ENTRYPOINT ["agw"]
+CMD ["--help"]

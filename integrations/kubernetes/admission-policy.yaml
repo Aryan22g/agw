@@ -1,0 +1,93 @@
+# Makes sidecar confinement a property of the cluster rather than of whoever
+# wrote the pod spec.
+#
+# `agw sidecar-init` lets only UID 1337 leave a pod's network namespace. That
+# holds only if nothing else in the pod can change the rules (CAP_NET_ADMIN),
+# change its UID (CAP_SETUID), run as 1337, or share the node's network. Those
+# are pod-spec settings, and a pod spec is where mistakes happen -- so every
+# pod labelled agw.dev/confined=true is checked here at admission, including
+# ephemeral debug containers added later.
+#
+# What it guards against is misconfiguration, not a hostile pod author: anyone
+# who can write the pod spec can also leave the label off. The agent itself
+# cannot create pods, and cannot change its own pod once admitted -- except
+# through ephemeral containers, which are checked too.
+#
+# Kubernetes 1.30+ (ValidatingAdmissionPolicy is GA). Apply once per cluster:
+#   kubectl apply -f admission-policy.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agw-confined-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods", "pods/ephemeralcontainers"]
+  matchConditions:
+    - name: labelled-confined
+      expression: >-
+        has(object.metadata.labels) && 'agw.dev/confined' in object.metadata.labels &&
+        object.metadata.labels['agw.dev/confined'] == 'true'
+  variables:
+    # Every container that is not the enforcement point or its init step.
+    - name: workloads
+      expression: >-
+        object.spec.containers.filter(c, c.name != 'agw') +
+        (has(object.spec.initContainers) ? object.spec.initContainers.filter(c, c.name != 'agw' && c.name != 'agw-init') : []) +
+        (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : [])
+    - name: podUID
+      expression: >-
+        has(object.spec.securityContext) && has(object.spec.securityContext.runAsUser) ?
+          object.spec.securityContext.runAsUser : -1
+  validations:
+    - expression: "!has(object.spec.hostNetwork) || object.spec.hostNetwork == false"
+      message: "a confined pod must not use the node's network namespace: the rules would not apply to it"
+    - expression: >-
+        has(object.spec.initContainers) && size(object.spec.initContainers) > 0 &&
+        object.spec.initContainers[0].name == 'agw-init'
+      message: "the first init container must be agw-init, so the rules exist before anything else runs"
+    - expression: >-
+        variables.workloads.all(c,
+          has(c.securityContext) && has(c.securityContext.capabilities) &&
+          has(c.securityContext.capabilities.drop) &&
+          c.securityContext.capabilities.drop.exists(d, d == 'ALL') &&
+          (!has(c.securityContext.capabilities.add) || size(c.securityContext.capabilities.add) == 0))
+      message: "every non-agw container must drop ALL capabilities and add none: NET_ADMIN removes the rules, SETUID takes the proxy's UID"
+    - expression: >-
+        variables.workloads.all(c,
+          has(c.securityContext) && has(c.securityContext.allowPrivilegeEscalation) &&
+          c.securityContext.allowPrivilegeEscalation == false &&
+          (!has(c.securityContext.privileged) || c.securityContext.privileged == false))
+      message: "every non-agw container must set allowPrivilegeEscalation: false and must not be privileged"
+    - expression: >-
+        variables.workloads.all(c,
+          ((has(c.securityContext) && has(c.securityContext.runAsUser)) ? c.securityContext.runAsUser : variables.podUID) != -1 &&
+          ((has(c.securityContext) && has(c.securityContext.runAsUser)) ? c.securityContext.runAsUser : variables.podUID) != 1337)
+      message: "every non-agw container must set runAsUser explicitly, and not to 1337: that is the only UID allowed out"
+    # The exempt containers must be what their names claim, so that naming
+    # the workload "agw" is not a way around the checks above.
+    - expression: >-
+        object.spec.initContainers[0].args.exists(a, a == 'sidecar-init')
+      message: "agw-init must run `agw sidecar-init`"
+    - expression: >-
+        object.spec.containers.filter(c, c.name == 'agw').all(c, false) &&
+        object.spec.initContainers.filter(c, c.name == 'agw').all(c,
+          has(c.restartPolicy) && c.restartPolicy == 'Always' &&
+          has(c.args) && size(c.args) > 0 && c.args[0] == 'proxy' &&
+          has(c.securityContext) && has(c.securityContext.runAsUser) && c.securityContext.runAsUser == 1337 &&
+          has(c.securityContext.capabilities) && has(c.securityContext.capabilities.drop) &&
+          c.securityContext.capabilities.drop.exists(d, d == 'ALL') &&
+          (!has(c.securityContext.capabilities.add) || size(c.securityContext.capabilities.add) == 0))
+      message: "the agw container must be a native sidecar running `agw proxy` as UID 1337 with all capabilities dropped"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agw-confined-pods
+spec:
+  policyName: agw-confined-pods
+  validationActions: [Deny]

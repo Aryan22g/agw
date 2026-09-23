@@ -1,0 +1,51 @@
+# Example tenant policy.
+#
+# One file per tenant, named for readability; the `tenant` field below is what
+# actually binds it. A tenant with no policy file is denied everything, so
+# onboarding a tenant never implicitly opens routes to it.
+#
+# Evaluation is deny-overrides with a default deny:
+#   1. no policy for the tenant        -> deny
+#   2. any matching `deny` rule        -> deny (an allow cannot override it)
+#   3. any matching `allow` rule       -> allow
+#   4. nothing matched                 -> deny
+tenant: tenant-alpha
+version: "1"
+
+rules:
+  # The support agent may work with issues, but only in repos under acme/.
+  - id: support-agent-issues
+    description: Support agent can read and create GitHub issues in acme repos
+    effect: allow
+    agents:
+      - agent-support
+    actions:
+      # A trailing ".*" matches on the dot boundary, so this covers
+      # github.issue.create and github.issue.list but NOT github.issueDelete.
+      - github.issue.*
+    resources:
+      - acme/*
+    # Even within those actions, never authorize anything riskier than a write.
+    max_risk_class: write
+
+  # The billing agent may read its own tenant's audit trail.
+  - id: billing-agent-audit-read
+    description: Billing agent can read audit events for its own tenant
+    effect: allow
+    agents:
+      - agent-billing
+    actions:
+      - audit.events.read
+    resources:
+      - tenant-alpha
+    max_risk_class: read
+
+  # A guardrail that no allow rule can override. Destructive repository
+  # operations are never delegated to an agent in this tenant.
+  - id: never-delete-repos
+    description: No agent may delete a repository, regardless of other grants
+    effect: deny
+    agents:
+      - "*"
+    actions:
+      - github.repo.delete

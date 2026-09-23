@@ -1,0 +1,5 @@
+# The adversarial stand-in agent for test.sh: curl, nslookup, nft and setpriv,
+# so every attempt in attack.sh is a real attempt rather than a missing tool.
+FROM alpine:3.21
+RUN apk add --no-cache curl nftables setpriv bind-tools
+COPY attack.sh /attack.sh

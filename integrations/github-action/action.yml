@@ -1,0 +1,136 @@
+# Run a command -- an agent, an eval harness -- contained, in CI, and keep
+# a verifiable record of everything it reached and tried to reach.
+#
+#   - uses: Aryan22g/agw/integrations/github-action@v0.1.0
+#     with:
+#       policy: eval/egress.yaml
+#       command: python run_eval.py --tasks 400
+#       env: OPENAI_API_KEY
+#
+# The step fails if the command fails or the evidence does not verify. The
+# evidence, its public key and a summary are uploaded as an artifact a
+# reviewer can check offline with `agw-verify`. Linux runners only: the
+# sandbox is a network namespace with an nftables firewall.
+name: agw run
+description: Run a command with default-deny network egress and a signed record of every attempt.
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  policy:
+    description: Egress policy file (see `agw init`). Everything not listed is refused.
+    required: true
+  command:
+    description: The command to run inside the sandbox, as a shell command line.
+    required: true
+  workload:
+    description: Workload id in the policy. Defaults to the only one.
+    required: false
+    default: ""
+  env:
+    description: Space-separated names of environment variables to pass into the sandbox. Nothing else crosses.
+    required: false
+    default: ""
+  evidence:
+    description: Where to write the evidence log.
+    required: false
+    default: agw-evidence.jsonl
+  artifact-name:
+    description: Name of the uploaded artifact. Empty to skip the upload.
+    required: false
+    default: agw-evidence
+  go-version:
+    description: Go version used to build agw from this action's source.
+    required: false
+    default: "1.26"
+
+outputs:
+  evidence:
+    description: Path of the evidence log.
+    value: ${{ inputs.evidence }}
+  denied:
+    description: Egress attempts refused by the proxy.
+    value: ${{ steps.run.outputs.denied }}
+
+runs:
+  using: composite
+  steps:
+    - name: check the runner
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" != "Linux" ]; then
+          echo "::error::agw run needs a Linux runner (network namespaces and nftables)"; exit 1
+        fi
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: false
+
+    - name: build agw from this action's source
+      shell: bash
+      run: |
+        src="${GITHUB_ACTION_PATH}/../.."
+        mkdir -p "$RUNNER_TEMP/agw-bin"
+        (cd "$src" && CGO_ENABLED=0 go build -trimpath -o "$RUNNER_TEMP/agw-bin/agw" ./cmd/agw \
+                   && CGO_ENABLED=0 go build -trimpath -o "$RUNNER_TEMP/agw-bin/agw-verify" ./cmd/agw-verify)
+        sudo apt-get update -qq >/dev/null && sudo apt-get install -y -qq iproute2 nftables >/dev/null
+        echo "$RUNNER_TEMP/agw-bin" >> "$GITHUB_PATH"
+
+    - name: run contained
+      id: run
+      shell: bash
+      env:
+        AGW_POLICY: ${{ inputs.policy }}
+        AGW_COMMAND: ${{ inputs.command }}
+        AGW_WORKLOAD: ${{ inputs.workload }}
+        AGW_ENV_NAMES: ${{ inputs.env }}
+        AGW_EVIDENCE: ${{ inputs.evidence }}
+      run: |
+        set -euo pipefail
+        export AGW_HOME="$RUNNER_TEMP/agw-home"
+        args=(run --policy "$AGW_POLICY" --evidence "$AGW_EVIDENCE")
+        [ -n "$AGW_WORKLOAD" ] && args+=(--workload "$AGW_WORKLOAD")
+        for n in $AGW_ENV_NAMES; do args+=(--env "$n"); done
+        # sudo builds the namespace and firewall; the variables named in
+        # `env` are passed to it explicitly, and nothing else crosses.
+        keep=AGW_HOME
+        for n in $AGW_ENV_NAMES; do keep="$keep,$n"; done
+        set +e
+        sudo --preserve-env="$keep" "$(command -v agw)" "${args[@]}" -- bash -c "$AGW_COMMAND" 2> >(tee agw-run.log >&2)
+        status=$?
+        set -e
+        sudo chown -R "$(id -u):$(id -g)" "$AGW_EVIDENCE" "$AGW_HOME" 2>/dev/null || true
+        denied=$(grep -oE 'denied [0-9]+' agw-run.log | grep -oE '[0-9]+' | tail -1 || true)
+        echo "denied=${denied:-0}" >> "$GITHUB_OUTPUT"
+        cp "$AGW_HOME/checkpoint.key.pub" agw-checkpoint.pub
+        exit $status
+
+    - name: verify the evidence
+      if: always() && steps.run.outcome != 'skipped'
+      shell: bash
+      env:
+        AGW_EVIDENCE: ${{ inputs.evidence }}
+      run: |
+        agw-verify --key agw-checkpoint.pub "$AGW_EVIDENCE"
+        {
+          echo "### agw run"
+          echo
+          echo '```'
+          agw audit show "$AGW_EVIDENCE" --denied | tail -25
+          echo '```'
+          echo
+          echo "Verify offline: \`agw-verify --key agw-checkpoint.pub $AGW_EVIDENCE\`"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: upload the evidence
+      if: always() && inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.evidence }}
+          agw-checkpoint.pub
+          agw-run.log
+        if-no-files-found: warn

@@ -1,0 +1,48 @@
+# Go
+bin/
+*.exe
+*.test
+cover.out
+coverage.out
+vendor/
+
+# IDEs / macOS
+.vscode/
+.idea/
+.DS_Store
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+# Local secrets and generated keys
+secrets/
+*.key
+*.key.pub
+
+# Audit output
+*.jsonl
+
+# Demo scratch: built binaries, generated keys, evidence from local runs.
+demo/.work/
+
+# Gym scratch: built binaries, generated policy and keys, evidence from local runs.
+gym/.work/
+
+# Built binaries at the repository root (use `make build`, which writes bin/).
+/ags
+/ags-signd
+/agw
+/agw-gym
+/agw-verify
+/dist/
+
+# Python build metadata
+*.egg-info/
+sdks/python/build/
+__pycache__/
+
+# The launch site publishes real sample evidence for its in-browser verifier.
+!site/samples/*.jsonl

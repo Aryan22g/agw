@@ -1,0 +1,116 @@
+# One agent, confined by an agw sidecar.
+#
+#   kubectl apply -f admission-policy.yaml    # once per cluster
+#   kubectl apply -f confined-agent.yaml
+#
+# The agent reaches only what policy.yaml in the ConfigMap allows, through the
+# proxy, and every attempt -- allowed or refused -- is in a signed evidence
+# chain on the agw container's volume. Replace the `agent` container with
+# yours; keep its securityContext, which the admission policy requires.
+#
+# Uses a native sidecar (an init container with restartPolicy: Always,
+# Kubernetes 1.29+), so the proxy is running before the agent starts and
+# outlives it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agw-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agw-policy
+  namespace: agw-demo
+data:
+  policy.yaml: |
+    version: "1"
+    workloads:
+      - id: agent
+        allow:
+          - host: pypi.org
+            ports: [443]
+            note: package index
+          - host: files.pythonhosted.org
+            ports: [443]
+            note: package downloads
+    permit_private: []
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: confined-agent
+  namespace: agw-demo
+  labels:
+    agw.dev/confined: "true"
+spec:
+  initContainers:
+    # 1. Install the rule: only UID 1337 leaves this pod. Needs NET_ADMIN,
+    #    runs once, exits.
+    - name: agw-init
+      image: ghcr.io/aryan22g/agw:v0.1.0
+      args: ["sidecar-init", "--proxy-uid", "1337", "--proxy-port", "8080"]
+      securityContext:
+        runAsUser: 0
+        runAsNonRoot: false
+        capabilities:
+          drop: ["ALL"]
+          add: ["NET_ADMIN"]
+
+    # 2. The enforcement point, as a native sidecar.
+    - name: agw
+      image: ghcr.io/aryan22g/agw:v0.1.0
+      restartPolicy: Always
+      args:
+        - proxy
+        - --policy=/etc/agw/policy.yaml
+        - --listen=127.0.0.1:8080
+        - --admin=/tmp/agw-admin.sock
+        - --evidence=/evidence/evidence.jsonl
+        - --workload=agent=127.0.0.1
+      env:
+        # Keep the checkpoint key with the evidence volume here for the
+        # example. In production use --key unix:/path/to/ags-signd.sock or a
+        # Secret, so the key does not live where the evidence does.
+        - name: AGW_HOME
+          value: /evidence/.agw
+      securityContext:
+        runAsUser: 1337
+        runAsGroup: 1337
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      startupProbe:
+        exec:
+          command: ["agw", "status", "--admin", "/tmp/agw-admin.sock"]
+        periodSeconds: 1
+        failureThreshold: 30
+      volumeMounts:
+        - { name: policy, mountPath: /etc/agw, readOnly: true }
+        - { name: evidence, mountPath: /evidence }
+
+  containers:
+    # 3. The workload. Its only way out is the proxy.
+    - name: agent
+      image: curlimages/curl:latest
+      command: ["sh", "-c", "curl -sS -o /dev/null -w 'pypi.org %{http_code}\\n' https://pypi.org/simple/; sleep 3600"]
+      env:
+        - { name: HTTP_PROXY,  value: "http://127.0.0.1:8080" }
+        - { name: HTTPS_PROXY, value: "http://127.0.0.1:8080" }
+        - { name: http_proxy,  value: "http://127.0.0.1:8080" }
+        - { name: https_proxy, value: "http://127.0.0.1:8080" }
+      securityContext:
+        runAsUser: 10000
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+
+  securityContext:
+    fsGroup: 1337
+  volumes:
+    - name: policy
+      configMap: { name: agw-policy }
+    # emptyDir is lost with the pod. Mount a PersistentVolumeClaim here, or
+    # ship the file off-node, for evidence you need to keep.
+    - name: evidence
+      emptyDir: {}

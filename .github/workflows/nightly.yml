@@ -1,0 +1,42 @@
+# The long searches: too slow for every pull request, too valuable to skip.
+# Each seed below is fresh, so the search covers new ground every night.
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: two independent evidence verifiers, 30,000 mutated logs
+        run: AGW_DIFF_SEED=${{ github.run_id }} AGW_DIFF_ITERATIONS=30000 go test -count=1 -timeout 60m -run Differential ./cmd/agw-verify/
+
+  gym-deep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: 300 generated worlds
+        run: go run ./cmd/agw-gym sweep --runs 300 --from-seed ${{ github.run_number }}000
+
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: containment demo (agent with root in Docker)
+        run: ./demo/run.sh

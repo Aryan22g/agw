@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>agw — contain AI agents, prove what they did</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="agw runs AI agents inside a boundary they cannot opt out of, even with root, and records everything they did and attempted as evidence anyone can verify offline.">
+<meta property="og:title" content="agw — contain AI agents, prove what they did">
+<meta property="og:description" content="Default-deny egress an agent cannot bypass, a kill switch that does not ask, and evidence anyone can verify with a file and a public key.">
+<meta property="og:type" content="website">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="agw home">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 12h10M12 7v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".35"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></svg>
+      agw
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#integrate">Integrate</a>
+      <a href="#verify">Verify</a>
+      <a href="#limits">Limits</a>
+      <a href="#tested">Testing</a>
+      <a class="gh" href="https://github.com/Aryan22g/agw">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top" class="wrap">
+
+  <!-- Every <section class="record"> is a record in a hash chain the page
+       computes in your browser; assets/site.js writes the seals. -->
+
+  <section class="record hero" data-title="thesis" aria-labelledby="h-thesis">
+    <div>
+      <div class="seal" aria-hidden="true"></div>
+      <h1 id="h-thesis">Contain AI agents.<br>Prove what they did.</h1>
+      <p class="lede">agw runs your agents inside a boundary they cannot opt out of, even with root. It refuses what policy does not allow, and it records everything they did <em>and attempted</em> as evidence anyone can verify with a file and a public key. No account, no network, no trust in us.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#start">Get started in five minutes</a>
+        <a class="btn" href="#verify">Verify evidence in your browser</a>
+      </div>
+      <div class="install" role="group" aria-label="Install">
+        <pre id="install-cmd">curl -fsSL https://aryan22g.github.io/agw/install.sh | sh</pre>
+        <button class="copy" type="button" data-copy="#install-cmd">Copy</button>
+      </div>
+      <div class="facts">
+        <span><b>Linux · macOS · Windows</b> CLI</span>
+        <span><b>Kubernetes · Docker · GitHub Actions</b></span>
+        <span><b>MCP · OpenTelemetry</b></span>
+        <span><b>Apache-2.0</b></span>
+      </div>
+    </div>
+
+    <div>
+      <figure class="term play" id="hero-term" aria-label="Transcript of the containment demo">
+        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>agent with root, trying to leave</span></div>
+<pre><span class="line"><span class="p">$</span> ./demo/run.sh</span><span class="line"><span class="ok">contained</span>  connect 169.254.169.254:80, no proxy</span><span class="line"><span class="ok">contained</span>  connect 8.8.8.8:53, no proxy</span><span class="line"><span class="ok">contained</span>  add a default route, reach the internet</span><span class="line"><span class="ok">contained</span>  read the evidence log from inside</span><span class="line"><span class="ok">contained</span>  CONNECT 169.254.169.254:80 via proxy <span class="c">403</span></span><span class="line"><span class="ok">contained</span>  CONNECT evil.example.com:443 via proxy <span class="c">403</span></span><span class="line"><span class="ok">contained</span>  CONNECT 10.0.0.1:22, internal pivot <span class="c">403</span></span><span class="line"><span class="ok">works    </span>  permitted egress to pypi.org</span><span class="line"><span class="ok">closed   </span>  kill switch on a live connection</span><span class="line"> </span><span class="line"><span class="p">$</span> agw-verify --key checkpoint.pub evidence.jsonl</span><span class="line"><span class="c">43 records, 7 checkpoints, head seq 43</span></span><span class="line"><span class="ok">VERIFIED</span></span></pre>
+      </figure>
+      <p class="term-caption">Real output from <code>demo/run.sh</code>. The agent can edit its own routing table, and it changes nothing: the rule that would carry the traffic lives where the agent cannot reach.</p>
+    </div>
+  </section>
+
+  <section class="record" id="why" data-title="why" aria-labelledby="h-why">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-why">Isolation that assumes the agent stays put is not isolation.</h2>
+    <div class="incident">
+      <div>
+        <blockquote>
+          The agent “read the EC2 node role credentials from the instance metadata service.”
+          <cite>Hugging Face, <a href="https://huggingface.co/blog/agent-intrusion-technical-timeline">Anatomy of a Frontier Lab Agent Intrusion</a>, 27 July 2026. The agent came from a cyber-capability evaluation, escaped its sandbox through a zero-day, and later used a harvested signing key to mint its own identity tokens.</cite>
+        </blockquote>
+        <p class="lede" style="font-size:1rem">Every control that depends on the agent choosing to use it failed the moment the agent stopped cooperating. agw puts enforcement outside the agent's trust domain. It is honest about what that does and does not change.</p>
+      </div>
+      <ol class="steps" aria-label="The intrusion, step by step, against agw">
+        <li><span class="v none">No effect</span><span>Zero-day in the registry cache proxy; a public eval harness; template injection in a data loader. Someone else's vulnerabilities.</span></li>
+        <li><span class="v stop">Prevented</span><span>Credentials from the metadata endpoint. Refused at the proxy and the firewall, whatever the policy says.</span></li>
+        <li><span class="v part">Reduced</span><span>Environment secrets. The supervisor's environment no longer crosses into the sandbox.</span></li>
+        <li><span class="v part">Reduced</span><span>One credential shared across clusters. A confined agent reaches only the destinations its policy names.</span></li>
+        <li><span class="v xform">Transformed</span><span>Forensics. Every attempt, allowed or refused, in a chain that verifies offline.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="record" id="how" data-title="three verbs" aria-labelledby="h-how">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-how">Three verbs. Every feature serves one.</h2>
+    <div class="verbs">
+      <div class="verb">
+        <span class="k">Confine</span>
+        <p>The agent reaches only what policy allows. It cannot opt out, because the enforcement point is outside its trust domain: a network namespace, a sidecar, a firewall rule it cannot remove. Cloud metadata, link-local and NAT64 space are refused no matter what the policy says.</p>
+        <span class="how">agw run · sidecar-init · proxy</span>
+      </div>
+      <div class="verb">
+        <span class="k">Decide</span>
+        <p>Every egress and every MCP tool call is checked before it happens, against a default-deny policy, with a stable reason code when refused. The kill switch cuts a running agent off in about a millisecond, and it does not ask the agent first.</p>
+        <span class="how">agw mcp · agw suspend · agw policy explain</span>
+      </div>
+      <div class="verb">
+        <span class="k">Prove</span>
+        <p>Every allow and every refusal lands in a hash-chained, signed evidence log, and is recorded <em>before</em> the action. If it cannot be recorded, it does not happen. Anyone can verify the log with a file and a public key.</p>
+        <span class="how">agw audit verify · agw-verify · RFC-0009</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="record" id="ladder" data-title="adoption ladder" aria-labelledby="h-ladder">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-ladder">Start by recording. Contain when you are ready.</h2>
+    <p class="lede">Each rung works on its own, and each rehearses before it enforces. Stop at whichever one fits. Nobody should have to adopt the whole thing on day one.</p>
+    <div class="ladder">
+      <div class="rung">
+        <span class="n">0</span>
+        <div><h3>Record</h3><span class="time">5 minutes · no risk</span><br><code>agw watch</code></div>
+        <p class="gets">Signed evidence from the OpenTelemetry your agents already emit. HTTP/protobuf, HTTP/JSON or gRPC, so any exporter works on its defaults.</p>
+        <p class="not">stop a compromised agent from lying about itself.</p>
+      </div>
+      <div class="rung">
+        <span class="n">1</span>
+        <div><h3>Rehearse</h3><span class="time">an hour · no risk</span><br><code>agw watch --policy p.yaml</code></div>
+        <p class="gets">What policy <em>would</em> refuse, and a policy drafted from real traffic with <code>agw policy suggest</code>. It never drafts the metadata endpoint.</p>
+        <p class="not">block anything.</p>
+      </div>
+      <div class="rung">
+        <span class="n">2</span>
+        <div><h3>Enforce tool calls</h3><span class="time">a day · low risk</span><br><code>agw mcp -- npx your-server</code></div>
+        <p class="gets">Forbidden MCP tool calls are refused before the server sees them, with one change to your client's config. Tool redefinitions (the rug pull) are detected, and stopped with <code>--pin-tools</code>.</p>
+        <p class="not">stop an agent that reaches the network some other way.</p>
+      </div>
+      <div class="rung">
+        <span class="n">3</span>
+        <div><h3>Contain</h3><span class="time">a week · the defence</span><br><code>sudo agw run -- python agent.py</code></div>
+        <p class="gets">Default-deny egress the agent cannot bypass even as root. No credentials in the sandbox. A kill switch measured at about a millisecond, with 100&nbsp;ms asserted in CI.</p>
+        <p class="not">stop harm within what the policy permits.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="record" id="integrate" data-title="integrations" aria-labelledby="h-int">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-int">It fits where your agents already run.</h2>
+    <p class="lede">Each integration was tested against the real third-party component and, for containment, against an agent with root trying to escape. CI runs the tests on every change.</p>
+
+    <div class="tabs" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Integrations">
+        <button role="tab" id="t-otel" aria-controls="p-otel" aria-selected="true">OpenTelemetry</button>
+        <button role="tab" id="t-mcp" aria-controls="p-mcp" aria-selected="false">MCP clients</button>
+        <button role="tab" id="t-run" aria-controls="p-run" aria-selected="false">Linux host</button>
+        <button role="tab" id="t-k8s" aria-controls="p-k8s" aria-selected="false">Kubernetes</button>
+        <button role="tab" id="t-compose" aria-controls="p-compose" aria-selected="false">Docker Compose</button>
+        <button role="tab" id="t-gha" aria-controls="p-gha" aria-selected="false">GitHub Actions</button>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-otel" aria-labelledby="t-otel">
+        <div>
+          <h3>Any agent that emits OpenTelemetry</h3>
+          <p>No SDK and no code change. <code>agw watch</code> prints three variables; set them where your agent runs. OpenAI Agents SDK, LangGraph, Pydantic AI, the Vercel AI SDK, LlamaIndex, CrewAI: anything that emits spans. You can also add one exporter to an existing Collector.</p>
+          <span class="badge">tested · Python SDK 1.41 · Node SDK · Collector 0.161</span>
+        </div>
+        <div class="snippet">
+          <button class="copy" type="button" data-copy="#s-otel">Copy</button>
+<pre id="s-otel">agw init
+agw watch --policy agw-policy.yaml
+
+# in the agent's environment
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer &lt;token&gt;"
+
+# later
+agw audit show agw-evidence-*.jsonl --would-deny
+agw policy suggest agw-evidence-*.jsonl --out drafted.yaml</pre>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-mcp" aria-labelledby="t-mcp" hidden>
+        <div>
+          <h3>Claude Desktop, Cursor, Claude Code, VS Code</h3>
+          <p>Put <code>agw mcp … --</code> in front of the server's command. Refusals come back as MCP errors the model sees, not transport failures it retries. Messages crafted so that agw and the server would read them differently are refused.</p>
+          <span class="badge">tested · official MCP SDK client + server-filesystem</span>
+        </div>
+        <div>
+          <div class="snippet">
+            <div class="file">claude_desktop_config.json · .cursor/mcp.json · .mcp.json</div>
+            <button class="copy" type="button" data-copy="#s-mcp">Copy</button>
+<pre id="s-mcp">{
+  "mcpServers": {
+    "filesystem": {
+      "command": "agw",
+      "args": ["mcp", "--policy", "/abs/agw-actions.yaml",
+               "--agent", "my-agent", "--pin-tools", "--",
+               "npx", "-y", "@modelcontextprotocol/server-filesystem",
+               "/abs/workspace"]
+    }
+  }
+}</pre>
+          </div>
+          <div class="snippet">
+            <div class="file">Claude Code</div>
+            <button class="copy" type="button" data-copy="#s-cc">Copy</button>
+<pre id="s-cc">claude mcp add filesystem -- agw mcp --policy /abs/agw-actions.yaml \
+  --agent my-agent -- npx -y @modelcontextprotocol/server-filesystem /abs/workspace</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-run" aria-labelledby="t-run" hidden>
+        <div>
+          <h3>One command: contained, recorded, verifiable</h3>
+          <p>The command runs in its own network namespace. Its only way out is a proxy that enforces policy, backed by a firewall it cannot remove. Nothing from your shell's environment crosses unless you name it. <code>agw suspend</code> from another terminal cuts connections, refuses new ones and kills the process group.</p>
+          <span class="badge">tested · as root on Linux · kill switch asserted in CI</span>
+        </div>
+        <div class="snippet">
+          <button class="copy" type="button" data-copy="#s-run">Copy</button>
+<pre id="s-run">sudo agw run --policy agw-policy.yaml \
+  --env OPENAI_API_KEY -- python agent.py
+
+# from another terminal
+sudo agw suspend --workload my-agent --reason "anomalous behaviour"
+#   connections closed  2
+#   teardown            246µs</pre>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-k8s" aria-labelledby="t-k8s" hidden>
+        <div>
+          <h3>A native sidecar, with the cluster enforcing its preconditions</h3>
+          <p>An init step lets only the proxy's UID leave the pod. An admission policy then refuses pods whose other containers keep capabilities, run as the proxy's UID or use the host network. It also refuses a <code>kubectl debug</code> container with <code>NET_ADMIN</code> added later.</p>
+          <span class="badge">tested · Kubernetes 1.33 · root attacker in the pod</span>
+        </div>
+        <div class="snippet">
+          <button class="copy" type="button" data-copy="#s-k8s">Copy</button>
+<pre id="s-k8s">kubectl apply -f integrations/kubernetes/admission-policy.yaml
+kubectl apply -f integrations/kubernetes/confined-agent.yaml
+
+# label your own pods, keep the agent's securityContext:
+#   metadata.labels:  agw.dev/confined: "true"
+#   capabilities:     drop: ["ALL"]</pre>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-compose" aria-labelledby="t-compose" hidden>
+        <div>
+          <h3>Three services, one network namespace</h3>
+          <p>Replace the agent's image with yours and keep <code>cap_drop: [ALL]</code>. The test runs this exact file against an agent with root: direct egress, direct DNS, flushing the firewall and switching to the proxy's UID all fail.</p>
+          <span class="badge">tested · adversarially · CI</span>
+        </div>
+        <div class="snippet">
+          <button class="copy" type="button" data-copy="#s-compose">Copy</button>
+<pre id="s-compose">cd integrations/docker-sidecar
+docker compose up --abort-on-container-exit
+
+# agent service:
+#   network_mode: service:agw
+#   cap_drop: [ALL]
+#   environment: HTTPS_PROXY=http://127.0.0.1:8080</pre>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="p-gha" aria-labelledby="t-gha" hidden>
+        <div>
+          <h3>Contained evals in CI</h3>
+          <p>Run an agent or eval harness contained. The step fails if the evidence does not verify. The evidence, its public key and a summary of every refusal are uploaded for a reviewer to check offline.</p>
+          <span class="badge">CI</span>
+        </div>
+        <div class="snippet">
+          <button class="copy" type="button" data-copy="#s-gha">Copy</button>
+<pre id="s-gha">- uses: Aryan22g/agw/integrations/github-action@v0.1.0
+  with:
+    policy: eval/egress.yaml
+    command: python run_eval.py --tasks 400
+    env: OPENAI_API_KEY</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="record" id="verify" data-title="verify" aria-labelledby="h-verify">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-verify">Verify evidence right here. Nothing leaves your machine.</h2>
+    <p class="lede">This is a complete, independent verifier running in your browser. Its specification is <a href="https://github.com/Aryan22g/agw/blob/main/docs/rfcs/RFC-0009-evidence-chain-format.md">RFC-0009</a>, it passes the same conformance corpus as the two Go verifiers, and it agrees with them on thousands of randomly mutated logs. The sample is the real log from the demo above.</p>
+
+    <div class="verifier">
+      <form class="vin" id="vform" novalidate>
+        <div class="samples" role="group" aria-label="Samples">
+          <button type="button" id="load-good">Load the demo log</button>
+          <button type="button" id="load-bad">Load it tampered</button>
+        </div>
+
+        <label class="drop" id="drop-log" for="f-log">
+          <span class="t">Evidence log</span>
+          <span class="f" id="n-log">drop a .jsonl file, or choose one</span>
+          <input type="file" id="f-log" accept=".jsonl,.json,.log,.txt">
+        </label>
+
+        <div>
+          <label class="drop" id="drop-key" for="f-key">
+            <span class="t">Checkpoint public key</span>
+            <span class="f" id="n-key">drop a .pub file, or paste below</span>
+            <input type="file" id="f-key" accept=".pub,.txt,.key">
+          </label>
+          <label class="small" for="key-text">or the base64 key</label>
+          <textarea id="key-text" rows="2" spellcheck="false" placeholder="44 characters of base64"></textarea>
+        </div>
+
+        <label class="drop" id="drop-anchor" for="f-anchor">
+          <span class="t">Anchor <span class="muted">(optional)</span></span>
+          <span class="f" id="n-anchor">a checkpoint you kept earlier: detects rollback</span>
+          <input type="file" id="f-anchor" accept=".jsonl,.json,.txt">
+        </label>
+
+        <button class="btn primary" type="submit">Verify</button>
+        <p class="privacy">Verification runs in this tab with your browser's own cryptography. The page sends nothing anywhere; watch the network panel.</p>
+      </form>
+
+      <div class="vout" id="vout" aria-live="polite">
+        <div class="verdict" id="verdict"><span class="word">Loading the sample…</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="record" id="limits" data-title="limits" aria-labelledby="h-limits">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-limits">What it does not stop.</h2>
+    <p class="lede">We do not prevent agents from going rogue. We bound what a rogue agent can reach, and make everything it attempted provable. Here is where that line falls, with the test behind every “yes”.</p>
+    <div class="cov">
+      <table>
+        <thead><tr><th scope="col">Failure</th><th scope="col">Stopped?</th><th scope="col">Why</th></tr></thead>
+        <tbody>
+          <tr class="no"><td>Harm within the agent's permitted scope</td><td class="v">No</td><td>That is alignment. Policy cannot tell a legitimate call from a harmful one when both are allowed.</td></tr>
+          <tr class="no"><td>Prompt injection causing a permitted action</td><td class="v">No</td><td>The action is permitted. Policy cannot see intent.</td></tr>
+          <tr class="no"><td>Kernel or hypervisor escape</td><td class="v">No</td><td>The substrate's job: gVisor, Firecracker.</td></tr>
+          <tr class="no"><td>Secrets sent to a <em>permitted</em> destination</td><td class="v">No</td><td>Destination policy decides where, not what. Our own test environment does this on every run, and it is recorded every time. Stopping it needs payload inspection, which is not built yet.<div class="proof">gym: exfil.via_allowed_*</div></td></tr>
+          <tr class="yes"><td>Unauthorized egress, direct or through the proxy</td><td class="v">Yes · rung 3</td><td>Default-deny egress the agent cannot bypass, even as root.<div class="proof">netns tests as root · Kubernetes and Compose tests</div></td></tr>
+          <tr class="yes"><td>Cloud credentials from the metadata endpoint</td><td class="v">Yes · rung 3</td><td>Refused whatever policy says, and cannot be exempted.<div class="proof">TestMetadataEndpointIsUnreachable</div></td></tr>
+          <tr class="yes"><td>A forbidden MCP tool call</td><td class="v">Yes · rung 2</td><td>Refused before the server sees it, including messages two parsers would read differently.<div class="proof">TestEnforcementPointAndServerReadTheSameCall</div></td></tr>
+          <tr class="yes"><td>Acting after the kill switch</td><td class="v">Yes</td><td>Connections cut, process group killed. Measured at about a millisecond; CI asserts 100&nbsp;ms.<div class="proof">scripts/killswitch-e2e.sh</div></td></tr>
+          <tr class="yes"><td>An action that is never recorded</td><td class="v">Yes</td><td>Fail closed: if the decision cannot be written, the action does not happen.<div class="proof">gym failclosed.* · TestAnUnrecordedCallIsNeverForwarded</div></td></tr>
+          <tr class="part"><td>Deleting the most recent evidence</td><td class="v">With an anchor</td><td>Records after the last checkpoint can be removed without trace from the file alone. A checkpoint kept elsewhere detects it. Live logs are checkpointed every 10&nbsp;s.<div class="proof">TestAnchorDetectsRollback</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><a href="https://github.com/Aryan22g/agw/blob/main/docs/coverage.md">The full coverage table</a> lists every class and the test behind each.</p>
+  </section>
+
+  <section class="record" id="tested" data-title="testing" aria-labelledby="h-tested">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-tested">Tested like an attacker would test it.</h2>
+    <div class="split">
+      <ul class="layers">
+        <li><b>An adversarial environment, scored by the world</b><span>A generated enterprise with a hostile agent in it. Each service keeps its own receipt of what it received, and that is compared with the evidence agw wrote. Egress with no record is the one failure a product cannot report about itself. 9,450 episodes across 150 generated worlds: none.</span></li>
+        <li><b>Root, on real Linux, in CI</b><span>The containment tests build real namespaces and firewall rules, then check that an agent with root cannot reach the metadata endpoint or remove the rules. CI fails if they are skipped.</span></li>
+        <li><b>Three verifiers, one specification</b><span>Go, standard-library Go and JavaScript implementations, written separately and run against each other on thousands of mutated logs. Where they disagreed, the specification was ambiguous or one of them was wrong.</span></li>
+        <li><b>Against the real thing</b><span>The official MCP client and server, the Python and Node OpenTelemetry SDKs, the OpenTelemetry Collector, a Kubernetes cluster and Docker Compose, each with the configuration published here.</span></li>
+      </ul>
+      <div class="found">
+        <h3>What that testing found in our own code</h3>
+        <p>Published, because the way to trust a security product is to see how its failures were found and fixed. <a href="https://github.com/Aryan22g/agw/blob/main/SECURITY.md">SECURITY.md</a> keeps the list.</p>
+        <ol>
+          <li>A crafted MCP message was authorized as one method and executed as a forbidden tool call.<span class="how">found by a server that parses like Node and Python do</span></li>
+          <li>A verified log could display a decision other than the one that was signed.<span class="how">found by differential testing of two verifiers</span></li>
+          <li>The policy allowlist could be used to reopen the cloud metadata range.<span class="how">found by the adversarial environment</span></li>
+          <li>The sandbox inherited the operator's environment, credentials included.<span class="how">found by running agw run for real</span></li>
+          <li>Keeping the signing key in a separate process stopped all traffic at the first checkpoint.<span class="how">found by testing separate custody end to end</span></li>
+          <li>Two verifiers wrapped around to 1.8×10<sup>19</sup> “unanchored records” on a reordered log.<span class="how">found by the JavaScript verifier on this page</span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="record" id="who" data-title="who it is for" aria-labelledby="h-who">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-who">Built for the rooms where this matters most.</h2>
+    <div class="aud">
+      <article>
+        <h3>Labs and evaluators</h3>
+        <p>Run an agent against a benchmark with shell and network access, contained, and publish the evidence alongside the paper. A reviewer verifies it offline, air-gapped, with no account. You get a containment control and a reproducibility artifact from one command.</p>
+<pre>sudo agw run --policy eval.yaml -- python harness.py</pre>
+      </article>
+      <article>
+        <h3>Platform and security teams</h3>
+        <p>Start with a record of what your production agents actually do. Draft a policy from it, rehearse it, then enforce it one agent at a time. Each step is defensible in a change review on its own. When something goes wrong at 03:00, cut the agent off in about a millisecond and reconstruct from a log nobody could have edited.</p>
+<pre>agw suspend --workload agent-support-01</pre>
+      </article>
+      <article>
+        <h3>Compliance</h3>
+        <p>EU AI Act Article 12 asks for automatic, tamper-evident event logs over a system's lifetime, kept for at least six months. agw records at a point the agent cannot bypass, without storing payloads, and exports bundles a third party can verify. <a href="https://github.com/Aryan22g/agw/blob/main/docs/compliance/eu-ai-act-article-12.md">The article-by-article mapping</a> says what it covers and what it does not.</p>
+<pre>agw audit export evidence.jsonl --from 2026-07-01T00:00:00Z --out q3.json</pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="record" id="standard" data-title="open standard" aria-labelledby="h-std">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-std">Evidence you do not have to trust us for.</h2>
+    <p class="lede">Verification that only a vendor can perform is not verification. The evidence format is a specification a stranger can implement, with test vectors that check whether they did.</p>
+    <div class="impls">
+      <div><b>RFC-0009</b><span>The evidence chain: an exact byte encoding, signed checkpoints, and a normative verification algorithm with stable problem codes.</span></div>
+      <div><b>39 conformance vectors</b><span>Expected results written from the specification, including every edge where common JSON and timestamp parsers disagree.</span></div>
+      <div><b>3 implementations</b><span>The reference, <code>agw-verify</code> (one file, standard library, no sockets) and the JavaScript on this page.</span></div>
+    </div>
+    <div class="links">
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/rfcs/RFC-0009-evidence-chain-format.md">Read RFC-0009</a>
+      <a href="https://github.com/Aryan22g/agw/tree/main/conformance">Conformance corpus</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/aat-mapping.md">IETF agent-audit-trail export</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/rfcs/RFC-0002-ags1-request-signing-profile.md">AGS1 request signing (RFC 9421)</a>
+    </div>
+  </section>
+
+  <section class="record" id="start" data-title="get started" aria-labelledby="h-start">
+    <div class="seal" aria-hidden="true"></div>
+    <h2 id="h-start">Five minutes from now.</h2>
+    <div class="start">
+      <div class="row"><span class="n">1</span><div><p>Install. Linux and macOS, amd64 and arm64. The script checks the release checksum before installing anything.</p>
+        <div class="install"><pre id="st-1">curl -fsSL https://aryan22g.github.io/agw/install.sh | sh</pre><button class="copy" type="button" data-copy="#st-1">Copy</button></div>
+        <p class="muted" style="margin-top:.5rem">Or <code>go install github.com/Aryan22g/agw/cmd/agw@latest</code>, or <code>docker run ghcr.io/aryan22g/agw</code>.</p></div></div>
+      <div class="row"><span class="n">2</span><div><p>Create a signing key and a starter policy. The command prints the next command for each rung.</p>
+        <div class="install"><pre id="st-2">agw init</pre><button class="copy" type="button" data-copy="#st-2">Copy</button></div></div></div>
+      <div class="row"><span class="n">3</span><div><p>Record, then verify. Anyone you give the public key to can do the second part.</p>
+        <div class="install"><pre id="st-3">agw watch</pre><button class="copy" type="button" data-copy="#st-3">Copy</button></div>
+        <div class="install" style="margin-top:.5rem"><pre id="st-4">agw audit verify agw-evidence-*.jsonl --key ~/.agw/checkpoint.key.pub</pre><button class="copy" type="button" data-copy="#st-4">Copy</button></div></div></div>
+    </div>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/Aryan22g/agw/blob/main/docs/integrations.md">Integration guide</a>
+      <a class="btn" href="https://github.com/Aryan22g/agw">Source on GitHub</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <a href="https://github.com/Aryan22g/agw">GitHub</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/integrations.md">Integrations</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/coverage.md">Coverage</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/SECURITY.md">Security</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/Aryan22g/agw/blob/main/docs/coverage.md">What it does not stop</a>
+    </div>
+    <p>Open source under the <a href="https://github.com/Aryan22g/agw/blob/main/LICENSE">Apache License 2.0</a>.</p>
+    <p class="chainnote">This page loads nothing from any other site. Each section above carries a seal: the section is a record in a hash chain your browser just computed, built the same way agw builds its evidence. Change a word with your browser's developer tools and every seal after it changes.</p>
+  </div>
+</footer>
+
+<script type="module" src="assets/site.js"></script>
+</body>
+</html>

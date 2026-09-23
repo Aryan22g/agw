@@ -1,0 +1,22 @@
+# Egress policy for the confined agent in the demo.
+#
+# Everything not listed here is denied. There is no wildcard, no default grant,
+# and no way to switch off the structural denials in internal/confine/guard.go
+# from this file -- permit_private takes explicit narrow CIDRs only, and even
+# then it cannot reopen link-local space where cloud metadata endpoints live.
+version: "1"
+
+workloads:
+  - id: agent-eval-01
+    allow:
+      # The one thing this agent legitimately needs: the package index.
+      - host: pypi.org
+        ports: [443]
+        note: package index (metadata)
+
+      - host: "*.pythonhosted.org"
+        ports: [443]
+        note: package index (downloads)
+
+# No exemptions. The agent has no legitimate reason to reach private space.
+permit_private: []

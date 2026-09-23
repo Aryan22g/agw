@@ -1,0 +1,10 @@
+# The confinement proxy. Binaries are cross-compiled on the host and copied in,
+# so the demo needs no toolchain image and no network access to build.
+FROM debian:trixie-slim
+
+RUN mkdir -p /var/run/agw /var/log/agw
+
+COPY bin/agw /usr/local/bin/agw
+COPY bin/ags /usr/local/bin/ags
+
+ENTRYPOINT ["/usr/local/bin/agw"]

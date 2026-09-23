@@ -1,0 +1,9 @@
+# Used by this repository's CI to exercise the action.
+version: "1"
+workloads:
+  - id: ci-agent
+    allow:
+      - host: pypi.org
+        ports: [443]
+        note: package index
+permit_private: []

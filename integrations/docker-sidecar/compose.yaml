@@ -1,0 +1,66 @@
+# An agent confined by a sidecar: the Docker Compose form of what the
+# Kubernetes manifest in ../kubernetes does.
+#
+#   docker compose up --abort-on-container-exit
+#
+# Three containers share one network namespace, owned by `agw`:
+#
+#   agw         the enforcement point, as UID 1337 -- the only UID whose
+#               sockets may leave the namespace
+#   agw-init    installs that rule once (it needs NET_ADMIN), then exits
+#   agent       your workload. Everything it sends goes through the proxy or
+#               nowhere. It runs with EVERY capability dropped: with
+#               NET_ADMIN it could delete the rule, with SETUID it could
+#               become UID 1337. Keep `cap_drop: [ALL]`.
+#
+# Replace the agent's image and command with your own. It reaches the
+# network through HTTP(S)_PROXY, which almost every HTTP client honours.
+name: agw-sidecar
+
+services:
+  agw:
+    image: ${AGW_IMAGE:-agw:latest}
+    user: "1337"   # the image's own user; sidecar-init lets only this UID out
+    command: >
+      proxy --policy /etc/agw/policy.yaml
+            --listen 127.0.0.1:8080
+            --admin /tmp/agw-admin.sock
+            --evidence /evidence/evidence.jsonl
+            --workload agent=127.0.0.1
+    environment:
+      AGW_HOME: /evidence/.agw
+    volumes:
+      - ./policy.yaml:/etc/agw/policy.yaml:ro
+      - evidence:/evidence
+    healthcheck:
+      test: ["CMD", "agw", "status", "--admin", "/tmp/agw-admin.sock"]
+      interval: 1s
+      retries: 30
+
+  agw-init:
+    image: ${AGW_IMAGE:-agw:latest}
+    user: "0"
+    network_mode: service:agw
+    cap_add: [NET_ADMIN]
+    command: sidecar-init --proxy-uid 1337 --proxy-port 8080
+    depends_on:
+      agw:
+        condition: service_healthy
+
+  agent:
+    image: ${AGENT_IMAGE:-curlimages/curl:latest}
+    network_mode: service:agw
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      HTTP_PROXY: http://127.0.0.1:8080
+      HTTPS_PROXY: http://127.0.0.1:8080
+      http_proxy: http://127.0.0.1:8080
+      https_proxy: http://127.0.0.1:8080
+    command: ["sh", "-c", "curl -sS -o /dev/null -w 'pypi.org %{http_code}\\n' https://pypi.org/simple/"]
+    depends_on:
+      agw-init:
+        condition: service_completed_successfully
+
+volumes:
+  evidence:
