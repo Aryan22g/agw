@@ -1,7 +1,7 @@
 # The agw image: the confinement plane, the recorder, the MCP enforcement
 # point and the standalone verifier.
 #
-#   docker run --rm -p 4318:4318 -v "$PWD:/data" ghcr.io/OWNER/agw watch --listen 0.0.0.0:4318 --out /data/evidence.jsonl
+#   docker run --rm -p 4318:4318 -v "$PWD:/data" ghcr.io/aryan22g/agw watch --listen 0.0.0.0:4318 --out /data/evidence.jsonl
 #
 # `agw proxy`, `agw watch`, `agw mcp` and `agw-verify` need no privileges and
 # run as an unprivileged user by default. `agw run` builds a network namespace
@@ -23,6 +23,19 @@ RUN for b in agw agw-verify ags; do \
     done
 
 FROM alpine:3.21
+ARG VERSION=dev
+ARG COMMIT=
+ARG DATE=
+# The source label is what links the published package to its repository on
+# GitHub; without it the package page and the repository do not know each other.
+LABEL org.opencontainers.image.source="https://github.com/Aryan22g/agw" \
+      org.opencontainers.image.url="https://aryan22g.github.io/agw/" \
+      org.opencontainers.image.title="agw" \
+      org.opencontainers.image.description="Contain AI agents, and prove what they did: default-deny egress, MCP tool-call enforcement, and signed evidence anyone can verify offline." \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.created="${DATE}"
 # UID 1337, the sidecar convention Istio established: `agw sidecar-init`
 # allows exactly this UID out of a shared network namespace by default, so the
 # image's own user and the proxy exception agree without configuration.

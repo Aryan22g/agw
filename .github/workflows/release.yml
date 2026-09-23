@@ -46,9 +46,12 @@ jobs:
             --title "${{ github.ref_name }}" --generate-notes --verify-tag
 
       # Image names must be lowercase; the repository owner is not.
+      # The build date is the commit's, so rebuilding the tag gives the same labels.
       - name: image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/agw" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/agw" >> "$GITHUB_OUTPUT"
+          echo "date=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -66,6 +69,13 @@ jobs:
           build-args: |
             VERSION=${{ github.ref_name }}
             COMMIT=${{ github.sha }}
+            DATE=${{ steps.image.outputs.date }}
+          # A multi-architecture image is an index; GitHub reads the source
+          # link and description from the index, the labels from each image.
+          annotations: |
+            index:org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            index:org.opencontainers.image.description=Contain AI agents, and prove what they did.
+            index:org.opencontainers.image.licenses=Apache-2.0
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.ref_name }}
             ${{ steps.image.outputs.name }}:latest

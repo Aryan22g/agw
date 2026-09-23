@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.2
+
+- The container image carries the standard OCI labels and annotations
+  (source, description, license, version, revision, build date), so
+  `ghcr.io/aryan22g/agw` is linked to this repository and shows its
+  description and license. The build date is the commit's, not the build's.
+- The Docker Compose example uses the published image and a command that
+  works as written (`docker compose run --rm agent`); the website's Compose
+  and Kubernetes snippets no longer assume a clone.
+
 ## v0.1.1
 
 - Verifiers no longer call an empty evidence log "VERIFIED". It contains
