@@ -190,8 +190,13 @@ lets only the proxy's UID out.
 
 ```bash
 cd integrations/docker-sidecar
-docker compose up --abort-on-container-exit
+docker compose run --rm agent     # start agw, install the rule, run the agent once
+docker compose up -d              # or keep a long-running agent up
+docker compose down -v
 ```
+
+It uses the published `ghcr.io/aryan22g/agw` image; set `AGW_IMAGE` to use
+your own build.
 
 Replace the `agent` service's image and command with yours. **Keep
 `cap_drop: [ALL]`**: with `NET_ADMIN` the agent could delete the rule, and

@@ -47,7 +47,7 @@ spec:
     # 1. Install the rule: only UID 1337 leaves this pod. Needs NET_ADMIN,
     #    runs once, exits.
     - name: agw-init
-      image: ghcr.io/aryan22g/agw:v0.1.0
+      image: ghcr.io/aryan22g/agw:v0.1.1
       args: ["sidecar-init", "--proxy-uid", "1337", "--proxy-port", "8080"]
       securityContext:
         runAsUser: 0
@@ -58,7 +58,7 @@ spec:
 
     # 2. The enforcement point, as a native sidecar.
     - name: agw
-      image: ghcr.io/aryan22g/agw:v0.1.0
+      image: ghcr.io/aryan22g/agw:v0.1.1
       restartPolicy: Always
       args:
         - proxy

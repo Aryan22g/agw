@@ -1,7 +1,8 @@
 # An agent confined by a sidecar: the Docker Compose form of what the
 # Kubernetes manifest in ../kubernetes does.
 #
-#   docker compose up --abort-on-container-exit
+#   docker compose run --rm agent     # start agw, install the rule, run the agent once
+#   docker compose up -d              # or keep a long-running agent up
 #
 # Three containers share one network namespace, owned by `agw`:
 #
@@ -19,7 +20,7 @@ name: agw-sidecar
 
 services:
   agw:
-    image: ${AGW_IMAGE:-agw:latest}
+    image: ${AGW_IMAGE:-ghcr.io/aryan22g/agw:v0.1.1}
     user: "1337"   # the image's own user; sidecar-init lets only this UID out
     command: >
       proxy --policy /etc/agw/policy.yaml
@@ -38,7 +39,7 @@ services:
       retries: 30
 
   agw-init:
-    image: ${AGW_IMAGE:-agw:latest}
+    image: ${AGW_IMAGE:-ghcr.io/aryan22g/agw:v0.1.1}
     user: "0"
     network_mode: service:agw
     cap_add: [NET_ADMIN]

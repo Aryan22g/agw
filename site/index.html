@@ -235,8 +235,9 @@ sudo agw suspend --workload my-agent --reason "anomalous behaviour"
         </div>
         <div class="snippet">
           <button class="copy" type="button" data-copy="#s-k8s">Copy</button>
-<pre id="s-k8s">kubectl apply -f integrations/kubernetes/admission-policy.yaml
-kubectl apply -f integrations/kubernetes/confined-agent.yaml
+<pre id="s-k8s">K=https://raw.githubusercontent.com/Aryan22g/agw/main/integrations/kubernetes
+kubectl apply -f $K/admission-policy.yaml   # once per cluster, 1.30+
+kubectl apply -f $K/confined-agent.yaml
 
 # label your own pods, keep the agent's securityContext:
 #   metadata.labels:  agw.dev/confined: "true"
@@ -252,8 +253,8 @@ kubectl apply -f integrations/kubernetes/confined-agent.yaml
         </div>
         <div class="snippet">
           <button class="copy" type="button" data-copy="#s-compose">Copy</button>
-<pre id="s-compose">cd integrations/docker-sidecar
-docker compose up --abort-on-container-exit
+<pre id="s-compose">git clone https://github.com/Aryan22g/agw && cd agw/integrations/docker-sidecar
+docker compose run --rm agent   # start agw, install the rule, run the agent once
 
 # agent service:
 #   network_mode: service:agw
