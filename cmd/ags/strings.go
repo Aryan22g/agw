@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"strings"
 )
 
@@ -21,12 +20,4 @@ func splitLines(v string) []string {
 func cutHeader(line string) (name, value string, ok bool) {
 	name, value, ok = strings.Cut(line, ":")
 	return strings.TrimSpace(name), strings.TrimSpace(value), ok
-}
-
-// envOr returns an environment variable or a fallback.
-func envOr(key, fallback string) string {
-	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
-		return v
-	}
-	return fallback
 }
