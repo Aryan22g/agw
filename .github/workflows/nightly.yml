@@ -40,3 +40,28 @@ jobs:
           go-version-file: go.mod
       - name: containment demo (agent with root in Docker)
         run: ./demo/run.sh
+
+  # What users pull must still be pullable. Registry versions can be deleted
+  # after a release -- deleting an "untagged" version on GHCR removes one
+  # architecture's image from under its tag -- so this is checked every night,
+  # not only at release time. Also the installer and the example image pins.
+  published:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - name: the image pulls and runs, per architecture, as a user gets it
+        run: |
+          set -eu
+          tags="latest $(grep -ohE 'ghcr.io/aryan22g/agw:v[0-9.]+' integrations/docker-sidecar/compose.yaml integrations/kubernetes/confined-agent.yaml | sed 's/.*://' | sort -u)"
+          for tag in $tags; do
+            for arch in amd64 arm64; do
+              docker pull -q --platform "linux/$arch" "ghcr.io/aryan22g/agw:$tag" >/dev/null
+              docker run --rm --platform "linux/$arch" "ghcr.io/aryan22g/agw:$tag" version
+              docker image rm -f "ghcr.io/aryan22g/agw:$tag" >/dev/null
+            done
+          done
+      - name: the one-line installer installs the latest release
+        run: |
+          curl -fsSL https://aryan22g.github.io/agw/install.sh | AGW_INSTALL_DIR="$RUNNER_TEMP/bin" sh
+          "$RUNNER_TEMP/bin/agw" version
