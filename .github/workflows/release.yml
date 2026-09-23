@@ -79,8 +79,13 @@ jobs:
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.ref_name }}
             ${{ steps.image.outputs.name }}:latest
+      # The attestation is stored by GitHub and verified with
+      # `gh attestation verify oci://ghcr.io/aryan22g/agw:TAG --owner Aryan22g`.
+      # Not pushed to the registry as well: GHCR lists that copy as a tagged
+      # version (sha256-...), newest of all, so the package page offered it as
+      # "Latest" and as the pull command.
       - uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: false
