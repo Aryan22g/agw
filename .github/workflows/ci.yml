@@ -191,6 +191,30 @@ jobs:
       - name: the refusals were recorded
         run: test "${{ steps.contained.outputs.denied }}" -ge 1
 
+  # The Action as another repository uses it: fetched by reference, on a
+  # GitHub-hosted VM, where the cloud metadata service is real. The control
+  # step shows it answers without agw; only status codes are printed.
+  github-action-remote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: control -- outside agw, this VM's metadata service answers
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H Metadata:true \
+            'http://169.254.169.254/metadata/instance?api-version=2021-02-01' || true)
+          echo "metadata service, uncontained: HTTP $code"
+      - id: contained
+        uses: Aryan22g/agw/integrations/github-action@main
+        with:
+          policy: integrations/github-action/example-policy.yaml
+          command: >-
+            curl -sf -o /dev/null https://pypi.org/simple/ &&
+            ! curl -sf --max-time 5 -H Metadata:true -o /dev/null
+            'http://169.254.169.254/metadata/instance?api-version=2021-02-01'
+          artifact-name: agw-evidence-remote
+      - name: the refusal was recorded
+        run: test "${{ steps.contained.outputs.denied }}" -ge 1
+
   image:
     runs-on: ubuntu-latest
     steps:

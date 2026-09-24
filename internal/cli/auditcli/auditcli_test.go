@@ -248,3 +248,29 @@ func TestVerifyCallsAnEmptyLogEmpty(t *testing.T) {
 		}
 	}
 }
+
+// TestVerifyCallsAnUnsignedLogUnsignedNotTampered: a log with no checkpoint
+// fails (exit 2) -- it proves nothing -- but nothing in it contradicts
+// anything, so the verdict must not accuse anyone of tampering.
+func TestVerifyCallsAnUnsignedLogUnsignedNotTampered(t *testing.T) {
+	ev, pubFile, _ := fixture(t, 3)
+	raw, _ := os.ReadFile(ev)
+	var kept []string
+	for _, l := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		if !strings.Contains(l, `"type":"checkpoint"`) {
+			kept = append(kept, l)
+		}
+	}
+	_ = os.WriteFile(ev, []byte(strings.Join(kept, "\n")+"\n"), 0o600)
+
+	out := capture(t)
+	err := Verify("agw", []string{ev, "--key", pubFile})
+	var ee *ExitError
+	if !errors.As(err, &ee) || ee.Code != 2 {
+		t.Fatalf("want exit 2 for an unsigned log, got %v", err)
+	}
+	if !strings.Contains(out.String(), "NOT VERIFIED — nothing in this log is signed") ||
+		strings.Contains(out.String(), "TAMPERING") {
+		t.Fatalf("unsigned log verdict:\n%s", out)
+	}
+}

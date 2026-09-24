@@ -37,6 +37,17 @@ export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf      # or http/json, or grpc on
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>"
 ```
 
+With `--policy`, each observation is checked against the workload whose `id`
+matches the agent's name: its `service.name` (set `OTEL_SERVICE_NAME`), or
+`gen_ai.agent.name` if it reports one. An agent the policy does not name is
+reported as `unknown_workload`, and `agw watch` lists those names when it
+stops.
+
+A program with no OpenTelemetry code can still be recorded with the standard
+zero-code instrumentation, for example
+`OTEL_SERVICE_NAME=my-agent opentelemetry-instrument python agent.py`, or
+`node --require @opentelemetry/auto-instrumentations-node/register agent.js`.
+
 All three OTLP transports are accepted, gzipped or not, so an exporter left on
 its defaults works. JSON and protobuf exports of the same spans produce
 identical records; a test pins that.

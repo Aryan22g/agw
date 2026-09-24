@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -93,6 +94,7 @@ func runWatch(args []string) error {
 		AllowUnauthenticated: *insecure,
 	}
 
+	var evaluator *recorder.Evaluator
 	if *policyPath != "" {
 		policy, err := confine.LoadPolicy(*policyPath)
 		if err != nil {
@@ -103,6 +105,7 @@ func runWatch(args []string) error {
 			return err
 		}
 		recCfg.Evaluator = ev
+		evaluator = ev
 	}
 
 	rec, err := recorder.New(recCfg)
@@ -205,6 +208,13 @@ func runWatch(args []string) error {
 		if shadow.WouldDeny > 0 {
 			fmt.Fprintf(os.Stderr, "agw: see them with  agw audit show %s --would-deny\n",
 				*evidencePath)
+		}
+		if unknown := evaluator.UnknownAgents(); len(unknown) > 0 {
+			fmt.Fprintf(os.Stderr,
+				"agw: the policy names no workload for %s, so everything they did would be refused.\n"+
+					"agw: a workload id must match the agent's name: its OpenTelemetry service.name\n"+
+					"agw: (OTEL_SERVICE_NAME) or gen_ai.agent.name. Rename one or the other.\n",
+				strings.Join(unknown, ", "))
 		}
 		if shadow.NotEvaluable > 0 {
 			fmt.Fprintf(os.Stderr,

@@ -185,3 +185,32 @@ func TestModelProviderIsNotADestination(t *testing.T) {
 		t.Errorf("verdict = %q, want %q", verdict, recorder.VerdictNotEvaluable)
 	}
 }
+
+// TestShadowNamesAnUnknownAgent pins what a real user test found: an agent
+// reporting itself as "python-agent" against a policy for "my-agent" had
+// every request reported as not_in_allowlist, even for hosts the policy
+// allows, which sends the operator looking for a missing host rather than a
+// name that does not match.
+func TestShadowNamesAnUnknownAgent(t *testing.T) {
+	e := evaluator(t)
+
+	v, r := e.Evaluate(recorder.Observation{AgentID: "python-agent",
+		Resource: "https://api.zendesk.com/tickets/42", Target: "api.zendesk.com"})
+	if v != recorder.VerdictWouldDeny || r != "unknown_workload" {
+		t.Errorf("unknown agent, allowed host: got %s/%s, want would_deny/unknown_workload", v, r)
+	}
+	// Structural refusals are still reported as what they are.
+	v, r = e.Evaluate(recorder.Observation{AgentID: "python-agent",
+		Resource: "http://169.254.169.254/latest/meta-data/"})
+	if v != recorder.VerdictWouldDeny || r != "metadata_endpoint" {
+		t.Errorf("unknown agent, metadata endpoint: got %s/%s, want would_deny/metadata_endpoint", v, r)
+	}
+	// A known agent is unaffected.
+	if v, _ := e.Evaluate(recorder.Observation{AgentID: "support-agent",
+		Resource: "https://api.zendesk.com/x"}); v != recorder.VerdictWouldAllow {
+		t.Errorf("known agent, allowed host: got %s", v)
+	}
+	if got := e.UnknownAgents(); len(got) != 1 || got[0] != "python-agent" {
+		t.Errorf("UnknownAgents() = %v, want [python-agent]", got)
+	}
+}

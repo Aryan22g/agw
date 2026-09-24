@@ -237,7 +237,11 @@ async function run() {
 
   // The verdict, stated as precisely as the result allows.
   let cls, word, why;
-  if (!r.intact) {
+  if (!r.intact && r.problems.every((p) => p.kind === "unanchored")) {
+    cls = "bad";
+    word = "Not signed";
+    why = "Nothing in this log is covered by a checkpoint, so it proves nothing yet: its records agree with each other, but could have been rewritten together. Ask for the log once it has been checkpointed.";
+  } else if (!r.intact) {
     cls = "bad";
     word = "Tampering detected";
     const first = r.problems.find((p) => p.kind !== "superseded_format");

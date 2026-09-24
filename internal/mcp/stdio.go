@@ -77,6 +77,10 @@ func (e *Enforcer) ServeStdio(ctx context.Context, clientIn io.Reader, clientOut
 	case err := <-serverDone:
 		// The server is gone; nothing further can be answered.
 		return err
+	case <-ctx.Done():
+		// Stopped (SIGTERM from the client, or Ctrl-C). Return now so the
+		// caller can sign what was recorded before anything kills it.
+		return ctx.Err()
 	case err := <-clientDone:
 		if err != nil {
 			return err

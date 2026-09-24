@@ -6,8 +6,10 @@ import (
 	"net"
 	"net/netip"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Aryan22g/agw/internal/confine"
 )
@@ -29,6 +31,9 @@ const (
 type Evaluator struct {
 	policy *confine.Policy
 	guard  *confine.Guard
+
+	mu      sync.Mutex
+	unknown map[string]bool // agents seen that the policy does not name
 }
 
 // NewEvaluator builds an Evaluator from an egress policy.
@@ -59,6 +64,20 @@ func (e *Evaluator) Evaluate(obs Observation) (verdict, reason string) {
 		}
 	}
 
+	// An agent the policy does not name is refused whatever it does, and
+	// "not in allowlist" would send its operator looking for a missing host
+	// rather than a name that does not match. Rehearsal reports only to the
+	// operator, so saying which it is leaks nothing to the agent.
+	if !e.policy.HasWorkload(obs.AgentID) {
+		e.mu.Lock()
+		if e.unknown == nil {
+			e.unknown = map[string]bool{}
+		}
+		e.unknown[obs.AgentID] = true
+		e.mu.Unlock()
+		return VerdictWouldDeny, "unknown_workload"
+	}
+
 	if !known {
 		// The host is known but the port is not. A host no rule names is a
 		// definitive deny regardless of port; a host some rule names cannot
@@ -73,6 +92,18 @@ func (e *Evaluator) Evaluate(obs Observation) (verdict, reason string) {
 		return VerdictWouldDeny, confine.Reason(confine.ErrNotPermitted)
 	}
 	return VerdictWouldAllow, "permitted"
+}
+
+// UnknownAgents lists the agents observed that the policy does not name.
+func (e *Evaluator) UnknownAgents() []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	out := make([]string, 0, len(e.unknown))
+	for a := range e.unknown {
+		out = append(out, a)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // destinationOf extracts the destination an observation touched.

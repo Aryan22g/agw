@@ -284,6 +284,17 @@ func Verify(prog string, args []string) error {
 		return nil
 	}
 
+	if onlyUnanchored(problems) {
+		// Nothing contradicts anything: the log is simply not signed. That is
+		// what a log cut off before its first checkpoint looks like, and also
+		// what one rewritten wholesale looks like -- so it proves nothing, and
+		// fails, but calling it tampering would accuse without evidence.
+		p("NOT VERIFIED — nothing in this log is signed (it has no checkpoint).\n")
+		p("Its records are consistent with each other, but without a signature they\n")
+		p("could have been rewritten together. Ask for the log once it has been\n")
+		p("checkpointed.\n")
+		return &ExitError{Code: 2, Msg: "evidence is not signed"}
+	}
 	p("TAMPERING DETECTED — %d problem(s):\n\n", len(problems))
 	for _, pr := range problems {
 		p("  seq %-8d %-14s %s\n", pr.Seq, pr.Kind, pr.Detail)
@@ -718,4 +729,14 @@ func exportAAT(prog, path, keyArg, agentVersion, out string) error {
 	}
 	fmt.Fprintf(Out, "The AAT file is unsigned; keep it with %s, whose checkpoints are the integrity evidence.\n", path)
 	return nil
+}
+
+// onlyUnanchored reports whether every problem is the log's lack of a checkpoint.
+func onlyUnanchored(problems []audit.VerifyProblem) bool {
+	for _, p := range problems {
+		if p.Kind != "unanchored" {
+			return false
+		}
+	}
+	return len(problems) > 0
 }

@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.4
+
+Found by running agw under real clients and real programs:
+
+- **`agw mcp` evidence from Claude Code sessions could not be verified.**
+  Claude Code ends a stdio server with SIGTERM and then SIGKILL; `agw mcp`
+  waited for the MCP server to exit before signing, was killed first, and left
+  every session's log with no checkpoint. It now signs as soon as the session
+  ends, reacts to SIGTERM mid-session, and signs within a second while a
+  session is quiet, so even SIGKILL without warning leaves a verifiable log.
+- A log with no checkpoint is reported as **NOT VERIFIED — nothing in this log
+  is signed**, not "TAMPERING DETECTED": it proves nothing, but nothing in it
+  is contradicted either. The exit status is unchanged (2).
+- `agw watch --policy` reported an agent the policy does not name as
+  `not_in_allowlist`, even for hosts the policy allows. It now says
+  `unknown_workload`, and lists those agents when it stops. The policy's
+  workload id must match the agent's `service.name` (or `gen_ai.agent.name`);
+  the starter policy and the OpenTelemetry guide now say so.
+
 ## v0.1.3
 
 - The container images for earlier tags could no longer be pulled: their

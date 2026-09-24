@@ -167,6 +167,12 @@ func (p *Policy) Permits(workloadID, host string, port int) (note string, err er
 // any port -- while a true answer is not, because the port might still be
 // wrong. The caller is expected to treat those two differently rather than
 // collapsing them into an allow.
+// HasWorkload reports whether the policy names this workload at all.
+func (p *Policy) HasWorkload(workloadID string) bool {
+	_, ok := p.byWorkload[workloadID]
+	return ok
+}
+
 func (p *Policy) PermitsHost(workloadID, host string) bool {
 	w, ok := p.byWorkload[workloadID]
 	if !ok {

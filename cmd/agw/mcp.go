@@ -143,7 +143,7 @@ func runMCP(args []string) error {
 		return err
 	}
 	defer ck.Close()
-	sinkCfg := gwaudit.EvidenceSinkConfig{Path: *evidencePath, CheckpointEvery: 50, CheckpointInterval: agwCheckpointInterval}
+	sinkCfg := gwaudit.EvidenceSinkConfig{Path: *evidencePath, CheckpointEvery: 50, CheckpointInterval: mcpCheckpointInterval}
 	ck.apply(&sinkCfg)
 	sink, err := gwaudit.NewEvidenceSink(sinkCfg)
 	if err != nil {
@@ -158,7 +158,11 @@ func runMCP(args []string) error {
 
 	var stats func() (uint64, uint64, uint64)
 	if stdio {
-		stats, err = serveMCPStdio(cfg, command, logger)
+		stats, err = serveMCPStdio(cfg, command, logger, func() {
+			if cerr := sink.Checkpoint(); cerr != nil {
+				fmt.Fprintf(os.Stderr, "agw: checkpoint at end of session: %v\n", cerr)
+			}
+		})
 	} else {
 		stats, err = serveMCPHTTP(cfg, *upstream, *listen, risk)
 	}
@@ -219,7 +223,17 @@ func serveMCPHTTP(cfg mcp.Config, upstream, listen string, risk routing.RiskClas
 }
 
 // serveMCPStdio launches the server as a subprocess and sits on its pipes.
-func serveMCPStdio(cfg mcp.Config, command []string, logger *slog.Logger) (func() (uint64, uint64, uint64), error) {
+// mcpCheckpointInterval is how long a record can sit unsigned in an MCP
+// session. Clients end stdio servers abruptly -- Claude Code sends SIGTERM and
+// then SIGKILL soon after -- so a session's records must be signed while it is
+// still running, not only at a clean exit. One signature per second, and only
+// when there is something new.
+const mcpCheckpointInterval = time.Second
+
+// serveMCPStdio runs the stdio enforcement point. sessionEnded is called as
+// soon as the client's session is over, before the server is reaped: the
+// client may kill this process at any moment after closing its side.
+func serveMCPStdio(cfg mcp.Config, command []string, logger *slog.Logger, sessionEnded func()) (func() (uint64, uint64, uint64), error) {
 	backend := "stdio:" + strings.Join(command, " ")
 	enf, err := mcp.NewEnforcer(cfg, backend)
 	if err != nil {
@@ -247,6 +261,10 @@ func serveMCPStdio(cfg mcp.Config, command []string, logger *slog.Logger) (func(
 		slog.String("agent", cfg.AgentID), slog.Bool("pin_tools", cfg.PinTools))
 
 	serveErr := enf.ServeStdio(ctx, os.Stdin, os.Stdout, serverIn, serverOut)
+	if errors.Is(serveErr, context.Canceled) {
+		serveErr = nil // stopped by a signal: a normal end of session
+	}
+	sessionEnded()
 
 	// Give the server a moment to exit on its own after its input closed,
 	// then stop it: an orphaned MCP server keeps whatever it holds open.

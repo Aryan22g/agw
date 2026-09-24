@@ -18,6 +18,8 @@ const starterEgressPolicy = `# Egress policy: which destinations each confined w
 version: "1"
 
 workloads:
+  # The id must match the agent's name: its OpenTelemetry service.name
+  # (OTEL_SERVICE_NAME) under agw watch, or --workload under agw run.
   - id: my-agent
     allow:
       - host: pypi.org
