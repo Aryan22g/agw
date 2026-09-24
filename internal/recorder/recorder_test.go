@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/internal/recorder"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type ckSigner struct{ priv ed25519.PrivateKey }

@@ -20,7 +20,7 @@ running a verifier. Three independent verifiers pass every vector:
 
 | Implementation | Language | Dependencies |
 |---|---|---|
-| `internal/gateway/audit` | Go | reference implementation |
+| `pkg/evidence` | Go | reference implementation |
 | [`cmd/agw-verify`](../cmd/agw-verify) | Go | standard library only, written from RFC-0009 |
 | [`site/assets/rfc0009.js`](../site/assets/rfc0009.js) | JavaScript | none; WebCrypto. Runs in the browser on the project site |
 

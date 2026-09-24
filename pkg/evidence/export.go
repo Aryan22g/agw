@@ -1,4 +1,4 @@
-package audit
+package evidence
 
 import (
 	"crypto/ed25519"

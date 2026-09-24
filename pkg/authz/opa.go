@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/decision"
+	"github.com/Aryan22g/agw/pkg/decision"
 )
 
 // OPAConfig configures the optional Open Policy Agent backend.

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/keys"
 	"github.com/Aryan22g/agw/pkg/ags1/signer"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // checkpointKey is the resolved custody of the key that signs evidence

@@ -3,7 +3,7 @@ package authz_test
 import (
 	"testing"
 
-	"github.com/Aryan22g/agw/internal/gateway/authz"
+	"github.com/Aryan22g/agw/pkg/authz"
 )
 
 // TestWildcardInAnUnsupportedPositionIsRejected.

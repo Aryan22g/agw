@@ -1,4 +1,4 @@
-package audit_test
+package evidence_test
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/keys"
 	"github.com/Aryan22g/agw/pkg/ags1/signer"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // writeLog produces a signed evidence log with n decisions.
@@ -33,7 +33,7 @@ func writeLog(t *testing.T, n int) (path string, pub ed25519.PublicKey) {
 	}
 
 	path = filepath.Join(t.TempDir(), "decisions.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 		Path: path, Signer: held, KeyID: "gw-test", CheckpointEvery: 5,
 	})
 	if err != nil {
@@ -41,7 +41,7 @@ func writeLog(t *testing.T, n int) (path string, pub ed25519.PublicKey) {
 	}
 
 	for i := 0; i < n; i++ {
-		ev := audit.GatewayEvent{
+		ev := evidence.GatewayEvent{
 			EventID:    fmt.Sprintf("evt_%d", i),
 			TenantID:   "tenant-alpha",
 			AgentID:    "agent-support",
@@ -65,7 +65,7 @@ func writeLog(t *testing.T, n int) (path string, pub ed25519.PublicKey) {
 	return path, pub
 }
 
-func verifyFile(t *testing.T, path string, pub ed25519.PublicKey) (*audit.VerifyResult, []audit.VerifyProblem) {
+func verifyFile(t *testing.T, path string, pub ed25519.PublicKey) (*evidence.VerifyResult, []evidence.VerifyProblem) {
 	t.Helper()
 	f, err := os.Open(path)
 	if err != nil {
@@ -73,7 +73,7 @@ func verifyFile(t *testing.T, path string, pub ed25519.PublicKey) (*audit.Verify
 	}
 	defer f.Close()
 
-	res, problems, err := audit.Verify(f, pub)
+	res, problems, err := evidence.Verify(f, pub)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestChainSurvivesRestart(t *testing.T) {
 		if err != nil {
 			t.Fatalf("signer: %v", err)
 		}
-		sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+		sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 			Path: path, Signer: held, KeyID: "gw", CheckpointEvery: 100,
 		})
 		if err != nil {
@@ -256,7 +256,7 @@ func TestChainSurvivesRestart(t *testing.T) {
 		}
 		for i := 0; i < n; i++ {
 			if _, err := sink.Write(context.Background(), "gateway.request.allowed",
-				audit.GatewayEvent{EventID: fmt.Sprintf("e%d", i), Decision: "allow"}); err != nil {
+				evidence.GatewayEvent{EventID: fmt.Sprintf("e%d", i), Decision: "allow"}); err != nil {
 				t.Fatalf("write: %v", err)
 			}
 		}
@@ -287,7 +287,7 @@ func TestVerifierNeedsOnlyLogAndKey(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 
-	res, problems, err := audit.Verify(strings.NewReader(string(data)), pub)
+	res, problems, err := evidence.Verify(strings.NewReader(string(data)), pub)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
@@ -331,7 +331,7 @@ func rebuildChain(t *testing.T, path string, dropTrailingCheckpoint bool) {
 	type entry struct {
 		isCheckpoint bool
 		raw          string
-		rec          audit.Record
+		rec          evidence.Record
 	}
 
 	var entries []entry
@@ -340,7 +340,7 @@ func rebuildChain(t *testing.T, path string, dropTrailingCheckpoint bool) {
 			entries = append(entries, entry{isCheckpoint: true, raw: l})
 			continue
 		}
-		var r audit.Record
+		var r evidence.Record
 		if err := json.Unmarshal([]byte(l), &r); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
@@ -364,7 +364,7 @@ func rebuildChain(t *testing.T, path string, dropTrailingCheckpoint bool) {
 
 	// Recompute the whole chain, leaving checkpoint lines untouched and in
 	// place.
-	prev := audit.GenesisHash
+	prev := evidence.GenesisHash
 	lastCheckpoint := -1
 	var out []string
 	for i := range entries {
@@ -373,7 +373,7 @@ func rebuildChain(t *testing.T, path string, dropTrailingCheckpoint bool) {
 			out = append(out, entries[i].raw)
 			continue
 		}
-		entries[i].rec = audit.Link(entries[i].rec, entries[i].rec.Seq, prev)
+		entries[i].rec = evidence.Link(entries[i].rec, entries[i].rec.Seq, prev)
 		prev = entries[i].rec.Hash
 		b, err := json.Marshal(entries[i].rec)
 		if err != nil {
@@ -459,7 +459,7 @@ func TestRebuildWithDroppedCheckpointLeavesAVisibleGap(t *testing.T) {
 // Evidence export
 // ---------------------------------------------------------------------------
 
-func exportBundle(t *testing.T, path string, pub ed25519.PublicKey, filter audit.ExportFilter) *audit.Bundle {
+func exportBundle(t *testing.T, path string, pub ed25519.PublicKey, filter evidence.ExportFilter) *evidence.Bundle {
 	t.Helper()
 
 	f, err := os.Open(path)
@@ -468,7 +468,7 @@ func exportBundle(t *testing.T, path string, pub ed25519.PublicKey, filter audit
 	}
 	defer f.Close()
 
-	b, err := audit.Export(f, pub, "gw-test", filter, time.Now().UTC())
+	b, err := evidence.Export(f, pub, "gw-test", filter, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
@@ -478,7 +478,7 @@ func exportBundle(t *testing.T, path string, pub ed25519.PublicKey, filter audit
 func TestUnfilteredExportIsContiguousAndVerifies(t *testing.T) {
 	path, pub := writeLog(t, 12)
 
-	b := exportBundle(t, path, pub, audit.ExportFilter{})
+	b := exportBundle(t, path, pub, evidence.ExportFilter{})
 	if len(b.Records) != 12 {
 		t.Fatalf("exported %d records, want 12", len(b.Records))
 	}
@@ -486,7 +486,7 @@ func TestUnfilteredExportIsContiguousAndVerifies(t *testing.T) {
 		t.Error("an unfiltered export was not marked contiguous")
 	}
 
-	problems, err := audit.VerifyBundle(b, pub)
+	problems, err := evidence.VerifyBundle(b, pub)
 	if err != nil {
 		t.Fatalf("verify bundle: %v", err)
 	}
@@ -499,11 +499,11 @@ func TestUnfilteredExportIsContiguousAndVerifies(t *testing.T) {
 // be caught, or a bundle would be weaker evidence than the log it came from.
 func TestTamperedBundleDetected(t *testing.T) {
 	path, pub := writeLog(t, 8)
-	b := exportBundle(t, path, pub, audit.ExportFilter{})
+	b := exportBundle(t, path, pub, evidence.ExportFilter{})
 
 	b.Records[3].Event.Decision = "deny"
 
-	problems, err := audit.VerifyBundle(b, pub)
+	problems, err := evidence.VerifyBundle(b, pub)
 	if err != nil {
 		t.Fatalf("verify bundle: %v", err)
 	}
@@ -526,7 +526,7 @@ func TestFilteredExportDeclaresItsLimitation(t *testing.T) {
 	}
 
 	path := filepath.Join(t.TempDir(), "decisions.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 		Path: path, Signer: held, KeyID: "gw-test", CheckpointEvery: 100,
 	})
 	if err != nil {
@@ -540,13 +540,13 @@ func TestFilteredExportDeclaresItsLimitation(t *testing.T) {
 			agent = "agent-b"
 		}
 		if _, err := sink.Write(context.Background(), "gateway.request.allowed",
-			audit.GatewayEvent{AgentID: agent, TenantID: "t", Decision: "allow"}); err != nil {
+			evidence.GatewayEvent{AgentID: agent, TenantID: "t", Decision: "allow"}); err != nil {
 			t.Fatalf("write: %v", err)
 		}
 	}
 	_ = sink.Close()
 
-	b := exportBundle(t, path, pub, audit.ExportFilter{AgentID: "agent-a"})
+	b := exportBundle(t, path, pub, evidence.ExportFilter{AgentID: "agent-a"})
 
 	if len(b.Records) != 5 {
 		t.Fatalf("filtered export has %d records, want 5", len(b.Records))
@@ -567,7 +567,7 @@ func TestFilteredExportDeclaresItsLimitation(t *testing.T) {
 	}
 
 	// Records present must still verify individually.
-	problems, err := audit.VerifyBundle(b, pub)
+	problems, err := evidence.VerifyBundle(b, pub)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
@@ -580,7 +580,7 @@ func TestFilteredExportDeclaresItsLimitation(t *testing.T) {
 // mistakable for a complete log.
 func TestBundleCarriesContinuityToTheWiderChain(t *testing.T) {
 	path, pub := writeLog(t, 10)
-	b := exportBundle(t, path, pub, audit.ExportFilter{})
+	b := exportBundle(t, path, pub, evidence.ExportFilter{})
 
 	if b.Continuity.SourceHeadSeq != 10 {
 		t.Errorf("source head seq = %d, want 10", b.Continuity.SourceHeadSeq)
@@ -627,7 +627,7 @@ func TestWriteDemoLog(t *testing.T) {
 		t.Fatalf("signer: %v", err)
 	}
 
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 		Path: path, Signer: held, KeyID: "gw-demo", CheckpointEvery: 6,
 	})
 	if err != nil {
@@ -648,7 +648,7 @@ func TestWriteDemoLog(t *testing.T) {
 
 		at := base.Add(time.Duration(i) * 11 * time.Minute)
 		if _, err := sink.Write(context.Background(), "gateway.request."+decision,
-			audit.GatewayEvent{
+			evidence.GatewayEvent{
 				EventID: fmt.Sprintf("evt_%02d", i), TenantID: "acme-bank",
 				AgentID: agent, DecisionID: fmt.Sprintf("dec_%03d", i),
 				Action: action, ResourceID: "acme/billing",
@@ -685,7 +685,7 @@ func TestConcurrentWritesProduceAValidChain(t *testing.T) {
 	}
 
 	path := filepath.Join(t.TempDir(), "decisions.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 		Path: path, Signer: held, KeyID: "gw-conc", CheckpointEvery: 25,
 	})
 	if err != nil {
@@ -710,7 +710,7 @@ func TestConcurrentWritesProduceAValidChain(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < each; i++ {
 				rec, err := sink.Write(context.Background(), "gateway.request.allowed",
-					audit.GatewayEvent{
+					evidence.GatewayEvent{
 						EventID:  fmt.Sprintf("w%d-%d", id, i),
 						TenantID: "t", AgentID: fmt.Sprintf("agent-%d", id),
 						Decision: "allow", ReasonCode: "allowed",
@@ -760,7 +760,7 @@ func TestConcurrentWritesProduceAValidChain(t *testing.T) {
 	}
 	defer f.Close()
 
-	res, problems, err := audit.Verify(f, pub)
+	res, problems, err := evidence.Verify(f, pub)
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
@@ -787,7 +787,7 @@ func TestWriteReturnsOnlyAfterDurability(t *testing.T) {
 	}
 
 	path := filepath.Join(t.TempDir(), "decisions.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
 		Path: path, Signer: held, KeyID: "gw-dur", CheckpointEvery: 1000,
 	})
 	if err != nil {
@@ -798,7 +798,7 @@ func TestWriteReturnsOnlyAfterDurability(t *testing.T) {
 	// sitting in a buffer would be missing.
 	for i := 0; i < 20; i++ {
 		rec, err := sink.Write(context.Background(), "gateway.request.allowed",
-			audit.GatewayEvent{EventID: fmt.Sprintf("e%d", i), Decision: "allow"})
+			evidence.GatewayEvent{EventID: fmt.Sprintf("e%d", i), Decision: "allow"})
 		if err != nil {
 			t.Fatalf("write: %v", err)
 		}
@@ -807,7 +807,7 @@ func TestWriteReturnsOnlyAfterDurability(t *testing.T) {
 		if err != nil {
 			t.Fatalf("open: %v", err)
 		}
-		res, _, err := audit.Verify(f, pub)
+		res, _, err := evidence.Verify(f, pub)
 		_ = f.Close()
 		if err != nil {
 			t.Fatalf("verify: %v", err)

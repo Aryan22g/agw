@@ -33,7 +33,7 @@ const (
 	PurposePrincipalContext = "principal-context"
 
 	// PurposeEvidenceCheckpoint pins the head of an evidence chain.
-	// See internal/gateway/audit.canonicalCheckpointInput.
+	// See pkg/evidence.canonicalCheckpointInput.
 	PurposeEvidenceCheckpoint = "evidence-checkpoint"
 
 	// PurposeReadinessProbe proves the signing path works end to end.

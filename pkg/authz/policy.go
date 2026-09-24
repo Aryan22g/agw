@@ -15,7 +15,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/Aryan22g/agw/internal/gateway/routing"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 // Effect is a rule's verdict.

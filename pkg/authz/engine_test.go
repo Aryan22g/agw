@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/authz"
-	"github.com/Aryan22g/agw/internal/gateway/decision"
-	"github.com/Aryan22g/agw/internal/gateway/routing"
+	"github.com/Aryan22g/agw/pkg/authz"
+	"github.com/Aryan22g/agw/pkg/decision"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 func engine(t *testing.T, p *authz.Policy) *authz.NativeEngine {

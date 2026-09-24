@@ -1,4 +1,4 @@
-package audit
+package evidence
 
 // Producer identifies what wrote a record, and how much weight it carries.
 //

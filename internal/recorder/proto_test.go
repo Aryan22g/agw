@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/internal/recorder"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 func str(k, v string) *commonpb.KeyValue {

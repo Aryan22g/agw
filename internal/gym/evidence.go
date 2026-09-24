@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/keys"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // generateCheckpointKey writes an Ed25519 keypair in the format the product's

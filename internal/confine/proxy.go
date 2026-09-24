@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // Sink records egress decisions. Satisfied by *audit.EvidenceSink, so the

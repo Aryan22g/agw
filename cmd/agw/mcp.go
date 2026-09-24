@@ -15,10 +15,10 @@ import (
 	"syscall"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
-	"github.com/Aryan22g/agw/internal/gateway/authz"
-	"github.com/Aryan22g/agw/internal/gateway/routing"
 	"github.com/Aryan22g/agw/internal/mcp"
+	"github.com/Aryan22g/agw/pkg/authz"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 // runMCP is Level 2: tool calls are actually refused, at the layer where an

@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // followPoll is how often a followed log is checked for growth. Polling
@@ -27,7 +27,7 @@ var followStop chan struct{}
 // and flushes on group commit, so a reader can observe half a record; parsing
 // it would print an error for a record that is, a moment later, perfectly
 // valid.
-func follow(path string, filter showFilter, print func(audit.Record)) error {
+func follow(path string, filter showFilter, print func(evidence.Record)) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open evidence log: %w", err)
@@ -55,7 +55,7 @@ func follow(path string, filter showFilter, print func(audit.Record)) error {
 				if len(line) == 0 || bytes.Contains(line, []byte(`"type":"checkpoint"`)) {
 					continue
 				}
-				var rec audit.Record
+				var rec evidence.Record
 				if json.Unmarshal(line, &rec) != nil {
 					continue
 				}

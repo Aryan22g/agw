@@ -29,7 +29,7 @@ func (e *Error) Error() string {
 }
 
 // Reason codes the gateway can return. These mirror
-// internal/gateway/decision.
+// pkg/decision.
 const (
 	ReasonSignatureInvalid   = "signature_invalid"
 	ReasonSignatureMalformed = "signature_malformed"

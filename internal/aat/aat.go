@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/jcs"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // DraftVersion is the revision of the draft this mapping follows.
@@ -55,7 +55,7 @@ type Record map[string]any
 //
 // records and the verification result come from the caller, which has
 // already read the file; Convert refuses when the result is not intact.
-func Convert(records []audit.Record, verified *audit.VerifyResult, opts Options) ([]Record, error) {
+func Convert(records []evidence.Record, verified *evidence.VerifyResult, opts Options) ([]Record, error) {
 	if verified == nil || !verified.Intact {
 		return nil, fmt.Errorf("aat: refusing to convert a chain that does not verify; " +
 			"converting it would produce a clean-looking AAT chain that hides the tampering")
@@ -110,7 +110,7 @@ func Convert(records []audit.Record, verified *audit.VerifyResult, opts Options)
 	return out, nil
 }
 
-func convertOne(r audit.Record, session string, opts Options) Record {
+func convertOne(r evidence.Record, session string, opts Options) Record {
 	e := r.Event
 	actionType, detail := actionOf(r)
 
@@ -163,7 +163,7 @@ func convertOne(r audit.Record, session string, opts Options) Record {
 }
 
 // actionOf chooses the draft's action_type and builds its required detail.
-func actionOf(r audit.Record) (string, map[string]any) {
+func actionOf(r evidence.Record) (string, map[string]any) {
 	e := r.Event
 	switch {
 	case strings.HasPrefix(r.EventName, "confine.workload."):
@@ -171,7 +171,7 @@ func actionOf(r audit.Record) (string, map[string]any) {
 		ev := strings.TrimPrefix(r.EventName, "confine.workload.")
 		return "lifecycle", map[string]any{"event": "workload_" + ev, "trigger": e.ReasonCode}
 
-	case e.Producer == audit.ProducerRecorder:
+	case e.Producer == evidence.ProducerRecorder:
 		// Self-reported activity. tool_call requires parameters_hash; the
 		// chain holds no parameters, so this is the hash of what it does hold
 		// about the call, and the mapping document says so.
@@ -187,9 +187,9 @@ func actionOf(r audit.Record) (string, map[string]any) {
 		switch {
 		case strings.HasPrefix(e.Producer, "enforced:confine"):
 			kind = "egress_authorization"
-		case e.Producer == audit.ProducerMCP:
+		case e.Producer == evidence.ProducerMCP:
 			kind = "tool_authorization"
-		case e.Producer == audit.ProducerGateway:
+		case e.Producer == evidence.ProducerGateway:
 			kind = "request_authorization"
 		}
 		d := map[string]any{"decision_type": kind}
@@ -218,9 +218,9 @@ func outcomeOf(decision string) string {
 // phaseOf: enforcement records are written before the action (the draft
 // requires pre_execution for every denied decision); a connection-closed
 // record and recorder observations are written after it.
-func phaseOf(r audit.Record) string {
+func phaseOf(r evidence.Record) string {
 	switch {
-	case r.EventName == "confine.egress.closed", r.Event.Producer == audit.ProducerRecorder:
+	case r.EventName == "confine.egress.closed", r.Event.Producer == evidence.ProducerRecorder:
 		return "post_execution"
 	case strings.HasPrefix(r.EventName, "confine.workload."):
 		return "concurrent"
@@ -234,11 +234,11 @@ func phaseOf(r audit.Record) string {
 // no credential -- has no place on that scale and is recorded as L0, with
 // recording_component carrying the enforcement point's independence. RFC-0009
 // Appendix A raises this with the draft.
-func trustLevel(e audit.GatewayEvent) string {
+func trustLevel(e evidence.GatewayEvent) string {
 	switch {
-	case e.Producer == audit.ProducerGateway && e.Federated:
+	case e.Producer == evidence.ProducerGateway && e.Federated:
 		return "L3" // both organisations' keys verified under a trust grant
-	case e.Producer == audit.ProducerGateway && e.KeyID != "":
+	case e.Producer == evidence.ProducerGateway && e.KeyID != "":
 		return "L2" // a registered key, issued through the control plane
 	default:
 		return "L0"
@@ -269,7 +269,7 @@ var riskScore = map[string]float64{"read": 0.1, "write": 0.4, "privileged": 0.7,
 
 // agentURI builds a stable URI for the agent. tenant and agent are escaped
 // separately so neither can smuggle a separator into the other.
-func agentURI(e audit.GatewayEvent) string {
+func agentURI(e evidence.GatewayEvent) string {
 	agent := e.AgentID
 	if agent == "" {
 		agent = "unattributed"

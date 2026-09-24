@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // EventAgentActivity is the evidence event name for an observed span.

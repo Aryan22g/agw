@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Aryan22g/agw/internal/confine"
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/signer"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // Range is one running configuration of the confinement plane: a policy, a

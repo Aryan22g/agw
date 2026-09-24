@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/Aryan22g/agw/internal/aat"
-	"github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/pkg/ags1/keys"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // ExitError carries a process exit status out of a command without the
@@ -199,7 +199,7 @@ func Verify(prog string, args []string) error {
 	// A checkpoint the auditor kept elsewhere is the only thing that can
 	// detect a log truncated exactly at a checkpoint boundary: that edit
 	// leaves a shorter log in which everything still verifies.
-	var anchorCP *audit.Checkpoint
+	var anchorCP *evidence.Checkpoint
 	if *anchor != "" {
 		cp, err := ReadAnchor(*anchor)
 		if err != nil {
@@ -208,7 +208,7 @@ func Verify(prog string, args []string) error {
 		anchorCP = cp
 	}
 
-	res, problems, err := audit.VerifyWithAnchor(f, pub, anchorCP)
+	res, problems, err := evidence.VerifyWithAnchor(f, pub, anchorCP)
 	if err != nil {
 		return err
 	}
@@ -310,18 +310,18 @@ func Verify(prog string, args []string) error {
 // out of a log they once verified -- not two values they have to transcribe
 // correctly under pressure. Given a whole evidence log, it takes the LAST
 // checkpoint, which is what "keep a copy of today's log" should mean.
-func ReadAnchor(path string) (*audit.Checkpoint, error) {
+func ReadAnchor(path string) (*evidence.Checkpoint, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read anchor: %w", err)
 	}
-	var last *audit.Checkpoint
+	var last *evidence.Checkpoint
 	for _, line := range strings.Split(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		var cp audit.Checkpoint
+		var cp evidence.Checkpoint
 		if err := json.Unmarshal([]byte(line), &cp); err != nil {
 			continue
 		}
@@ -357,7 +357,7 @@ type showFilter struct {
 	since                                   time.Time
 }
 
-func (f showFilter) match(rec audit.Record) bool {
+func (f showFilter) match(rec evidence.Record) bool {
 	e := rec.Event
 	switch {
 	case f.tenant != "" && e.TenantID != f.tenant:
@@ -412,7 +412,7 @@ func Show(prog string, args []string) error {
 		return err
 	}
 
-	print := func(rec audit.Record) {
+	print := func(rec evidence.Record) {
 		if *asJSON {
 			out, _ := json.Marshal(rec)
 			fmt.Fprintln(Out, string(out))
@@ -447,7 +447,7 @@ func Show(prog string, args []string) error {
 	}
 	defer f.Close()
 
-	records, err := audit.ReadRecords(f)
+	records, err := evidence.ReadRecords(f)
 	if err != nil {
 		return err
 	}
@@ -522,7 +522,7 @@ func Export(prog string, args []string) error {
 		return fmt.Errorf("--format %q: want bundle or aat", *format)
 	}
 
-	filter := audit.ExportFilter{TenantID: *tenant, AgentID: *agent}
+	filter := evidence.ExportFilter{TenantID: *tenant, AgentID: *agent}
 	if *from != "" {
 		t, err := time.Parse(time.RFC3339, *from)
 		if err != nil {
@@ -549,7 +549,7 @@ func Export(prog string, args []string) error {
 		return err
 	}
 
-	bundle, err := audit.Export(f, pub, *keyID, filter, time.Now().UTC())
+	bundle, err := evidence.Export(f, pub, *keyID, filter, time.Now().UTC())
 	if err != nil {
 		return err
 	}
@@ -605,7 +605,7 @@ func VerifyBundle(prog string, args []string) error {
 		return fmt.Errorf("read bundle: %w", err)
 	}
 
-	var bundle audit.Bundle
+	var bundle evidence.Bundle
 	if err := json.Unmarshal(data, &bundle); err != nil {
 		return fmt.Errorf("parse bundle: %w", err)
 	}
@@ -615,7 +615,7 @@ func VerifyBundle(prog string, args []string) error {
 		return err
 	}
 
-	problems, err := audit.VerifyBundle(&bundle, pub)
+	problems, err := evidence.VerifyBundle(&bundle, pub)
 	if err != nil {
 		return err
 	}
@@ -678,7 +678,7 @@ func exportAAT(prog, path, keyArg, agentVersion, out string) error {
 	if err != nil {
 		return fmt.Errorf("open evidence log: %w", err)
 	}
-	res, problems, err := audit.Verify(f, pub)
+	res, problems, err := evidence.Verify(f, pub)
 	f.Close()
 	if err != nil {
 		return err
@@ -693,7 +693,7 @@ func exportAAT(prog, path, keyArg, agentVersion, out string) error {
 	if err != nil {
 		return err
 	}
-	records, err := audit.ReadRecords(f)
+	records, err := evidence.ReadRecords(f)
 	f.Close()
 	if err != nil {
 		return err
@@ -732,7 +732,7 @@ func exportAAT(prog, path, keyArg, agentVersion, out string) error {
 }
 
 // onlyUnanchored reports whether every problem is the log's lack of a checkpoint.
-func onlyUnanchored(problems []audit.VerifyProblem) bool {
+func onlyUnanchored(problems []evidence.VerifyProblem) bool {
 	for _, p := range problems {
 		if p.Kind != "unanchored" {
 			return false

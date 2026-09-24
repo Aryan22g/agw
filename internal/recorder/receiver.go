@@ -16,7 +16,7 @@ import (
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // Sink records observations. Satisfied by *audit.EvidenceSink.

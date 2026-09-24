@@ -10,9 +10,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
-	"github.com/Aryan22g/agw/internal/gateway/authz"
-	"github.com/Aryan22g/agw/internal/gateway/routing"
+	"github.com/Aryan22g/agw/pkg/authz"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 // Sink records decisions.

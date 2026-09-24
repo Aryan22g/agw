@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
 	"github.com/Aryan22g/agw/internal/mcp"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type brokenSink struct{}

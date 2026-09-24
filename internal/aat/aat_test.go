@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type edSigner struct{ priv ed25519.PrivateKey }
@@ -24,24 +24,24 @@ func chain(t *testing.T) (string, ed25519.PublicKey) {
 	t.Helper()
 	pub, priv, _ := ed25519.GenerateKey(nil)
 	path := filepath.Join(t.TempDir(), "ev.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{Path: path, Signer: edSigner{priv}, KeyID: "k", CheckpointEvery: 3})
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{Path: path, Signer: edSigner{priv}, KeyID: "k", CheckpointEvery: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
 	now := time.Now().UTC()
 	events := []struct {
 		name string
-		ev   audit.GatewayEvent
+		ev   evidence.GatewayEvent
 	}{
-		{"confine.workload.registered", audit.GatewayEvent{TenantID: "local", AgentID: "eval-1", Decision: "allow", ReasonCode: "attested", Producer: audit.ProducerConfineProxy}},
-		{"confine.egress.denied", audit.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "http.request", ResourceID: "169.254.169.254:80", Decision: "deny", ReasonCode: "metadata_endpoint", Producer: audit.ProducerConfineProxy}},
-		{"confine.egress.allowed", audit.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "net.connect", ResourceID: "pypi.org:443", Decision: "allow", ReasonCode: "allowed", Producer: audit.ProducerConfineProxy, LatencyMS: 3}},
-		{"confine.egress.closed", audit.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "net.connect", ResourceID: "pypi.org:443", Decision: "allow", ReasonCode: "closed", Producer: audit.ProducerConfineProxy}},
-		{"mcp.tool.call", audit.GatewayEvent{TenantID: "acme", AgentID: "support", Action: "mcp.tool.delete_repo", Decision: "deny", ReasonCode: "policy_denied", Producer: audit.ProducerMCP, Risk: "destructive"}},
-		{"gateway.decision", audit.GatewayEvent{TenantID: "acme", AgentID: "partner/bot", KeyID: "kid", Action: "github.issue.create", Decision: "allow", Producer: audit.ProducerGateway, Federated: true}},
-		{"gateway.decision", audit.GatewayEvent{TenantID: "acme", AgentID: "billing", KeyID: "kid", Action: "billing.refund", Decision: "deny", ReasonCode: "credential_revoked", Producer: audit.ProducerGateway}},
-		{"agent.activity", audit.GatewayEvent{AgentID: "research-agent", Action: "tool.web_search", ResourceID: "call_1", Decision: "would_deny", ReasonCode: "not_in_allowlist", Producer: audit.ProducerRecorder}},
-		{"agent.activity", audit.GatewayEvent{AgentID: "research-agent", Action: "http.get", ResourceID: "https://x.example/", Decision: "error", Producer: audit.ProducerRecorder, StartedAt: now}},
+		{"confine.workload.registered", evidence.GatewayEvent{TenantID: "local", AgentID: "eval-1", Decision: "allow", ReasonCode: "attested", Producer: evidence.ProducerConfineProxy}},
+		{"confine.egress.denied", evidence.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "http.request", ResourceID: "169.254.169.254:80", Decision: "deny", ReasonCode: "metadata_endpoint", Producer: evidence.ProducerConfineProxy}},
+		{"confine.egress.allowed", evidence.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "net.connect", ResourceID: "pypi.org:443", Decision: "allow", ReasonCode: "allowed", Producer: evidence.ProducerConfineProxy, LatencyMS: 3}},
+		{"confine.egress.closed", evidence.GatewayEvent{TenantID: "local", AgentID: "eval-1", Action: "net.connect", ResourceID: "pypi.org:443", Decision: "allow", ReasonCode: "closed", Producer: evidence.ProducerConfineProxy}},
+		{"mcp.tool.call", evidence.GatewayEvent{TenantID: "acme", AgentID: "support", Action: "mcp.tool.delete_repo", Decision: "deny", ReasonCode: "policy_denied", Producer: evidence.ProducerMCP, Risk: "destructive"}},
+		{"gateway.decision", evidence.GatewayEvent{TenantID: "acme", AgentID: "partner/bot", KeyID: "kid", Action: "github.issue.create", Decision: "allow", Producer: evidence.ProducerGateway, Federated: true}},
+		{"gateway.decision", evidence.GatewayEvent{TenantID: "acme", AgentID: "billing", KeyID: "kid", Action: "billing.refund", Decision: "deny", ReasonCode: "credential_revoked", Producer: evidence.ProducerGateway}},
+		{"agent.activity", evidence.GatewayEvent{AgentID: "research-agent", Action: "tool.web_search", ResourceID: "call_1", Decision: "would_deny", ReasonCode: "not_in_allowlist", Producer: evidence.ProducerRecorder}},
+		{"agent.activity", evidence.GatewayEvent{AgentID: "research-agent", Action: "http.get", ResourceID: "https://x.example/", Decision: "error", Producer: evidence.ProducerRecorder, StartedAt: now}},
 	}
 	for _, e := range events {
 		if _, err := sink.Write(context.Background(), e.name, e.ev); err != nil {
@@ -56,13 +56,13 @@ func chain(t *testing.T) (string, ed25519.PublicKey) {
 func convertFile(t *testing.T, path string, pub ed25519.PublicKey) ([]Record, []byte) {
 	t.Helper()
 	f, _ := os.Open(path)
-	res, _, err := audit.Verify(f, pub)
+	res, _, err := evidence.Verify(f, pub)
 	f.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
 	f, _ = os.Open(path)
-	recs, _ := audit.ReadRecords(f)
+	recs, _ := evidence.ReadRecords(f)
 	f.Close()
 	out, err := Convert(recs, res, Options{Source: "ev.jsonl"})
 	if err != nil {
@@ -158,10 +158,10 @@ func TestRefusesAChainThatDoesNotVerify(t *testing.T) {
 	_ = os.WriteFile(path, bytes.Replace(raw, []byte(`"Decision":"deny"`), []byte(`"Decision":"allow"`), 1), 0o600)
 
 	f, _ := os.Open(path)
-	res, _, _ := audit.Verify(f, pub)
+	res, _, _ := evidence.Verify(f, pub)
 	f.Close()
 	f, _ = os.Open(path)
-	recs, _ := audit.ReadRecords(f)
+	recs, _ := evidence.ReadRecords(f)
 	f.Close()
 	if _, err := Convert(recs, res, Options{}); err == nil || !strings.Contains(err.Error(), "does not verify") {
 		t.Fatalf("converted a tampered chain: %v", err)

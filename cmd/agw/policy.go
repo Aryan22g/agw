@@ -16,9 +16,9 @@ import (
 
 	"github.com/Aryan22g/agw/internal/cli/auditcli"
 	"github.com/Aryan22g/agw/internal/confine"
-	"github.com/Aryan22g/agw/internal/gateway/audit"
-	"github.com/Aryan22g/agw/internal/gateway/authz"
-	"github.com/Aryan22g/agw/internal/gateway/routing"
+	"github.com/Aryan22g/agw/pkg/authz"
+	"github.com/Aryan22g/agw/pkg/evidence"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 // runPolicy is policy authoring: check a file, ask why something would be
@@ -376,7 +376,7 @@ func runPolicySuggest(args []string) error {
 		if err != nil {
 			return err
 		}
-		recs, err := audit.ReadRecords(f)
+		recs, err := evidence.ReadRecords(f)
 		f.Close()
 		if err != nil {
 			return err
@@ -507,7 +507,7 @@ func runPolicySuggest(args []string) error {
 // destinationOf extracts host and port from any record that describes a
 // network destination: confinement egress records carry host:port, recorder
 // observations carry a URL or server address in ResourceID.
-func destinationOf(rec audit.Record) (string, int, bool) {
+func destinationOf(rec evidence.Record) (string, int, bool) {
 	e := rec.Event
 	id := strings.TrimSpace(e.ResourceID)
 	if id == "" {

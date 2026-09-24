@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Public Go packages.** The evidence chain, action policy, decisions and
+  request routing are now importable by other Go modules:
+  `pkg/evidence` (was `internal/gateway/audit`), `pkg/authz`, `pkg/decision`
+  and `pkg/routing` (were under `internal/gateway`). They are at v0: a
+  breaking change is possible between minor releases and will be listed here.
+  `pkg/ags1` stays frozen. The command-line tools are unchanged.
+
 ## v0.1.4
 
 Found by running agw under real clients and real programs:

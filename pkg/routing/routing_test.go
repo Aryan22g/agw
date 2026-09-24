@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Aryan22g/agw/internal/gateway/routing"
+	"github.com/Aryan22g/agw/pkg/routing"
 )
 
 func registry(t *testing.T) *routing.Registry {

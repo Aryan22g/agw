@@ -1,7 +1,7 @@
 // Package confine implements non-cooperative egress containment.
 //
-// The gateway in internal/gateway authorizes requests an agent chooses to
-// send through it. This package handles the case the 2026 frontier lab
+// A gateway authorizes requests an agent chooses to send through it. This
+// package handles the case the 2026 frontier lab
 // incidents actually exercised: an agent that has root inside its own sandbox
 // and does not want to cooperate. Enforcement therefore has to sit outside
 // anything the agent controls, and the agent must have no route to the network

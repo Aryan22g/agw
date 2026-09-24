@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Aryan22g/agw/internal/cli/auditcli"
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // The test binary doubles as a fake MCP server: one that answers requests but,

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type edSigner struct{ priv ed25519.PrivateKey }
@@ -21,13 +21,13 @@ func (s edSigner) Sign(m []byte) ([]byte, error) { return ed25519.Sign(s.priv, m
 func (s edSigner) KeyID() string                 { return "k" }
 
 // fixture writes a small signed chain and its public key file.
-func fixture(t *testing.T, n int) (evidence, pubFile, pubB64 string) {
+func fixture(t *testing.T, n int) (logPath, pubFile, pubB64 string) {
 	t.Helper()
 	dir := t.TempDir()
 	pub, priv, _ := ed25519.GenerateKey(nil)
-	evidence = filepath.Join(dir, "ev.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{
-		Path: evidence, Signer: edSigner{priv}, KeyID: "k", CheckpointEvery: 1000,
+	logPath = filepath.Join(dir, "ev.jsonl")
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{
+		Path: logPath, Signer: edSigner{priv}, KeyID: "k", CheckpointEvery: 1000,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +37,7 @@ func fixture(t *testing.T, n int) (evidence, pubFile, pubB64 string) {
 		if i%2 == 1 {
 			decision = "deny"
 		}
-		if _, err := sink.Write(context.Background(), "confine.egress", audit.GatewayEvent{
+		if _, err := sink.Write(context.Background(), "confine.egress", evidence.GatewayEvent{
 			AgentID: "a1", Action: "net.connect", ResourceID: "pypi.org:443",
 			Decision: decision, ReasonCode: "not_in_allowlist",
 		}); err != nil {
@@ -54,7 +54,7 @@ func fixture(t *testing.T, n int) (evidence, pubFile, pubB64 string) {
 	if err := os.WriteFile(pubFile, []byte(pubB64+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	return evidence, pubFile, pubB64
+	return logPath, pubFile, pubB64
 }
 
 func capture(t *testing.T) *bytes.Buffer {
@@ -163,7 +163,7 @@ func TestSinceAcceptsDurations(t *testing.T) {
 func TestTailFollowsAppendedRecords(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "live.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{Path: path})
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{Path: path})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,10 +172,10 @@ func TestTailFollowsAppendedRecords(t *testing.T) {
 	followPoll = 10 * time.Millisecond
 	followStop = make(chan struct{})
 
-	got := make(chan audit.Record, 10)
+	got := make(chan evidence.Record, 10)
 	done := make(chan error, 1)
 	go func() {
-		done <- follow(path, showFilter{decision: "deny"}, func(r audit.Record) { got <- r })
+		done <- follow(path, showFilter{decision: "deny"}, func(r evidence.Record) { got <- r })
 	}()
 
 	for i := 0; i < 4; i++ {
@@ -183,7 +183,7 @@ func TestTailFollowsAppendedRecords(t *testing.T) {
 		if i >= 2 {
 			d = "deny"
 		}
-		if _, err := sink.Write(context.Background(), "e", audit.GatewayEvent{AgentID: "a", Decision: d}); err != nil {
+		if _, err := sink.Write(context.Background(), "e", evidence.GatewayEvent{AgentID: "a", Decision: d}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -213,7 +213,7 @@ func TestTailNoticesTruncation(t *testing.T) {
 	defer close(followStop)
 
 	done := make(chan error, 1)
-	go func() { done <- follow(ev, showFilter{}, func(audit.Record) {}) }()
+	go func() { done <- follow(ev, showFilter{}, func(evidence.Record) {}) }()
 	time.Sleep(100 * time.Millisecond)
 	if err := os.Truncate(ev, 10); err != nil {
 		t.Fatal(err)

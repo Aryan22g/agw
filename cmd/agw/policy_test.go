@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Aryan22g/agw/internal/gateway/audit"
+	"github.com/Aryan22g/agw/pkg/evidence"
 )
 
-func writeEvidence(t *testing.T, events []audit.GatewayEvent) string {
+func writeEvidence(t *testing.T, events []evidence.GatewayEvent) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "ev.jsonl")
-	sink, err := audit.NewEvidenceSink(audit.EvidenceSinkConfig{Path: path})
+	sink, err := evidence.NewEvidenceSink(evidence.EvidenceSinkConfig{Path: path})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,7 +29,7 @@ func writeEvidence(t *testing.T, events []audit.GatewayEvent) string {
 // TestSuggestDraftsObservedButNeverGuardedOrEnforcedRefusals pins the two
 // rules that keep `policy suggest` from being a rubber stamp.
 func TestSuggestDraftsObservedButNeverGuardedOrEnforcedRefusals(t *testing.T) {
-	ev := writeEvidence(t, []audit.GatewayEvent{
+	ev := writeEvidence(t, []evidence.GatewayEvent{
 		// Observed in shadow mode: nothing blocked, the agent reached it.
 		{AgentID: "w", Action: "http.get", ResourceID: "https://pypi.org/simple/x", Decision: "would_deny", ReasonCode: "not_in_allowlist"},
 		{AgentID: "w", Action: "http.get", ResourceID: "https://pypi.org/simple/y", Decision: "observed"},

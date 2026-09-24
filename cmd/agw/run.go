@@ -18,7 +18,7 @@ import (
 
 	"github.com/Aryan22g/agw/internal/confine"
 	"github.com/Aryan22g/agw/internal/confine/netns"
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // runRun is the single-command path: build a sandbox, run a workload inside

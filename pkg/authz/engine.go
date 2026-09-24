@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Aryan22g/agw/internal/gateway/decision"
+	"github.com/Aryan22g/agw/pkg/decision"
 )
 
 // Engine evaluates authorization requests.

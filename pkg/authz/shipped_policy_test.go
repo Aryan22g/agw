@@ -3,13 +3,13 @@ package authz_test
 import (
 	"testing"
 
-	"github.com/Aryan22g/agw/internal/gateway/authz"
+	"github.com/Aryan22g/agw/pkg/authz"
 )
 
 // TestShippedPolicyLoads guards the example policy: a config we ship that
 // does not load would break everyone who starts from it.
 func TestShippedPolicyLoads(t *testing.T) {
-	policies, err := authz.LoadPolicyDir("../../../configs/gateway/policies")
+	policies, err := authz.LoadPolicyDir("../../configs/gateway/policies")
 	if err != nil {
 		t.Fatalf("shipped policy dir failed to load: %v", err)
 	}

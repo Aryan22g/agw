@@ -50,7 +50,7 @@ class GatewayError(AGS1Error):
         return self.reason in (REASON_CREDENTIAL_REVOKED, REASON_CREDENTIAL_EXPIRED)
 
 
-# Reason codes, mirroring internal/gateway/decision.
+# Reason codes, mirroring pkg/decision.
 REASON_SIGNATURE_INVALID = "signature_invalid"
 REASON_SIGNATURE_MALFORMED = "signature_malformed"
 REASON_DIGEST_MISMATCH = "digest_mismatch"

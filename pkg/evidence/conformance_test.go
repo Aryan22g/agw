@@ -1,4 +1,4 @@
-package audit
+package evidence
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ import (
 
 var updateCorpus = flag.Bool("update-corpus", false, "rewrite conformance/evidence/agw-evidence-v2.json")
 
-const corpusPath = "../../../conformance/evidence/agw-evidence-v2.json"
+const corpusPath = "../../conformance/evidence/agw-evidence-v2.json"
 
 // corpusSeed derives the test key. It is published so anyone can regenerate
 // the corpus, and it is useless for anything else by construction.
@@ -437,7 +437,7 @@ func loadCorpus(t *testing.T) corpus {
 	t.Helper()
 	raw, err := os.ReadFile(corpusPath)
 	if err != nil {
-		t.Fatalf("read corpus: %v (run: go test ./internal/gateway/audit -run TestEvidenceCorpus -update-corpus)", err)
+		t.Fatalf("read corpus: %v (run: go test ./pkg/evidence -run TestEvidenceCorpus -update-corpus)", err)
 	}
 	var c corpus
 	if err := json.Unmarshal(raw, &c); err != nil {

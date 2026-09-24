@@ -59,7 +59,7 @@ vulncheck: ## Known-vulnerability scan (install: go install golang.org/x/vuln/cm
 	govulncheck ./...
 
 conformance: ## Evidence and AGS1 conformance: corpus, independent verifier, differential search
-	go test -count=1 ./internal/gateway/audit/ ./pkg/ags1/vectors/ ./cmd/agw-verify/
+	go test -count=1 ./pkg/evidence/ ./pkg/ags1/vectors/ ./cmd/agw-verify/
 	AGW_DIFF_ITERATIONS=$${AGW_DIFF_ITERATIONS:-5000} go test -count=1 -run Differential ./cmd/agw-verify/
 	@command -v node >/dev/null && node site/test/conformance.mjs || echo "node not installed: skipped the JavaScript verifier"
 

@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type testSigner struct {

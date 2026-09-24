@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // Head exposes the chain position, so an episode's evidence can be located

@@ -107,7 +107,7 @@ the feature is for.
 `Verify` checked the links and the signatures it found, and said `VERIFIED`
 when it found none. A chain with no checkpoint is internally consistent and
 proves nothing: anyone who can write the file can rewrite it from genesis and
-recompute every hash. Fixed in `internal/gateway/audit/verify.go`.
+recompute every hash. Fixed in `pkg/evidence/verify.go`.
 
 A third result is a limit rather than a bug, and the fix is a new capability
 rather than a patch. Truncating a log exactly at a checkpoint boundary leaves

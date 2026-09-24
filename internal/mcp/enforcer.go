@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
-	"github.com/Aryan22g/agw/internal/gateway/authz"
-	"github.com/Aryan22g/agw/internal/gateway/decision"
+	"github.com/Aryan22g/agw/pkg/authz"
+	"github.com/Aryan22g/agw/pkg/decision"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 // Enforcer is the MCP policy decision and evidence core, independent of how

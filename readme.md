@@ -280,14 +280,16 @@ cmd/ags             AGS1 developer CLI (keygen, sign, verify, thumbprint, doctor
 cmd/ags-signd       key custody: signs without handing out the key
 
 pkg/ags1            FROZEN AGS1 v1 wire profile, shared by every SDK
+pkg/evidence        the evidence chain (RFC-0009): writer, checkpoints, verifier, bundles
+pkg/authz           action policy: default deny, deny overrides, risk classes (used by agw mcp)
+pkg/decision        allow / deny / fail, with stable reason codes
+pkg/routing         HTTP request -> action, resource, risk class
 sdks/go/agentgw     Go SDK
 sdks/python         Python SDK (independent implementation of AGS1)
 
 internal/confine         egress policy, structural guard, proxy, netns sandbox, sidecar
 internal/mcp             MCP enforcement (HTTP and stdio)
 internal/recorder        OpenTelemetry ingest (HTTP/JSON, HTTP/protobuf, gRPC)
-internal/gateway/audit   the evidence chain: writer, reference verifier, checkpoints
-internal/gateway/authz   tool-call policy (used by agw mcp)
 internal/aat             IETF agent-audit-trail export
 internal/strictjson      refusing JSON two parsers would read differently
 internal/gym             the adversarial environment
@@ -296,6 +298,20 @@ conformance/        test vectors for the evidence format
 integrations/       Kubernetes, Docker Compose, GitHub Actions
 site/               the website, including the in-browser verifier
 docs/rfcs           normative specifications
+```
+
+---
+
+### Go packages
+
+Everything under `pkg/` is supported API that other Go modules may import.
+`pkg/ags1` is frozen: AGS1 v1 does not change. `pkg/evidence`, `pkg/authz`,
+`pkg/decision` and `pkg/routing` are at v0: a breaking change is possible
+between minor releases, and CHANGELOG.md says so when it happens. Anything
+under `internal/` can change at any time.
+
+```bash
+go get github.com/Aryan22g/agw/pkg/evidence@latest
 ```
 
 ---

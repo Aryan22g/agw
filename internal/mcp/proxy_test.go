@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	gwaudit "github.com/Aryan22g/agw/internal/gateway/audit"
-	"github.com/Aryan22g/agw/internal/gateway/authz"
 	"github.com/Aryan22g/agw/internal/mcp"
+	"github.com/Aryan22g/agw/pkg/authz"
+	gwaudit "github.com/Aryan22g/agw/pkg/evidence"
 )
 
 type ck struct{ priv ed25519.PrivateKey }
